@@ -10,22 +10,31 @@ export async function submitReview(formData: FormData) {
     if (!userId) throw new Error("Unauthorized");
 
     const movieId = parseInt(formData.get("movieId") as string);
-    const rating = parseInt(formData.get("rating") as string);
+    const ratingStr = formData.get("rating") as string;
     const content = formData.get("content") as string;
     const movieDescription = formData.get("movieDescription") as string;
+
+    const rating = ratingStr ? parseInt(ratingStr) : null;
+
+    if (!rating && !content.trim()) {
+        throw new Error("Please provide either a rating or a review.");
+    }
 
     const { error } = await supabase.from("reviews").upsert({
         user_id: userId,
         movie_id: movieId,
-        rating,
-        content,
+        ...(rating !== null && { rating }),
+        ...(content.trim() && { content }),
         created_at: new Date().toISOString(),
     });
 
-    if (error) throw error;
+    if (error) {
+        console.error("[submitReview] Supabase Error:", error.message, error.details);
+        throw new Error(`Database error: ${error.message}`);
+    }
 
-    // Update user taste profile for RAG
-    if (rating >= 4) {
+    // Update user taste profile for RAG if high rating is given
+    if (rating && rating >= 4) {
         await updateUserTaste(userId, movieDescription);
     }
 

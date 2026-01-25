@@ -2,61 +2,144 @@
 
 import Link from "next/link";
 import { UserButton, useUser, SignInButton } from "@clerk/nextjs";
-import { Search, Film, Heart, List, Home } from "lucide-react";
-import { useState } from "react";
+import { Search, Film, Heart, List, Home, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function Navbar() {
-    const { isSignedIn } = useUser();
-    const [search, setSearch] = useState("");
-    const router = useRouter();
+  const { isSignedIn } = useUser();
+  const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const router = useRouter();
+  const searchRef = useRef<HTMLDivElement>(null);
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (search.trim()) {
-            router.push(`/search?q=${encodeURIComponent(search)}`);
-        }
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (search.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/suggestions?query=${encodeURIComponent(search)}`);
+        const data = await res.json();
+        setSuggestions(data.results);
+        setShowSuggestions(true);
+      } catch (err) {
+        setSuggestions([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    return (
-        <nav className="navbar glass">
-            <div className="nav-content">
-                <Link href="/" className="logo">
-                    <Film className="logo-icon" />
-                    <span className="gradient-text">Moviefy</span>
-                </Link>
+    const timeoutId = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
 
-                <form onSubmit={handleSearch} className="search-bar">
-                    <Search className="search-icon" />
-                    <input
-                        type="text"
-                        placeholder="Search movies, genres, mood..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </form>
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (search.trim()) {
+      setShowSuggestions(false);
+      router.push(`/search?q=${encodeURIComponent(search)}`);
+    }
+  };
 
-                <div className="nav-links">
-                    <Link href="/" className="nav-link"><Home size={20} /><span>Home</span></Link>
-                    {isSignedIn && (
-                        <>
-                            <Link href="/watchlist" className="nav-link"><Heart size={20} /><span>Watchlist</span></Link>
-                            <Link href="/lists" className="nav-link"><List size={20} /><span>Lists</span></Link>
-                        </>
-                    )}
-                    <div className="auth-btn">
-                        {isSignedIn ? (
-                            <UserButton afterSignOutUrl="/" />
-                        ) : (
-                            <SignInButton mode="modal">
-                                <button className="login-btn">Sign In</button>
-                            </SignInButton>
-                        )}
+  return (
+    <nav className="navbar glass">
+      <div className="nav-content">
+        <Link
+          href="/"
+          className="logo"
+          onClick={() => console.log("--- AUTH DEBUG ---\nCheck terminal/server logs to see if TMDB_API_KEY is active.")}
+        >
+          <Film className="logo-icon" />
+          <span className="gradient-text">Moviefy</span>
+        </Link>
+
+        <div className="search-wrapper" ref={searchRef}>
+          <form onSubmit={handleSearch} className="search-bar">
+            {isLoading ? <Loader2 className="search-icon spinning" /> : <Search className="search-icon" />}
+            <input
+              type="text"
+              placeholder="Search movies, genres, mood..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onFocus={() => search.length >= 2 && setShowSuggestions(true)}
+            />
+          </form>
+
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="suggestions-dropdown">
+              {suggestions.map((movie) => (
+                <Link
+                  key={movie.id}
+                  href={`/movies/${movie.id}`}
+                  className="suggestion-link"
+                  onClick={() => {
+                    setShowSuggestions(false);
+                    setSearch("");
+                  }}
+                >
+                  <div className="suggestion-item">
+                    <div className="suggestion-poster">
+                      {movie.poster ? (
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w92${movie.poster}`}
+                          alt={movie.title}
+                          width={45}
+                          height={65}
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div className="poster-placeholder" />
+                      )}
                     </div>
-                </div>
+                    <div className="suggestion-info">
+                      <span className="suggestion-title">{movie.title}</span>
+                      <span className="suggestion-year">{movie.year}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
+          )}
+        </div>
 
-            <style jsx>{`
+        <div className="nav-links">
+          <Link href="/" className="nav-link"><Home size={20} /><span>Home</span></Link>
+          {isSignedIn && (
+            <>
+              <Link href="/watchlist" className="nav-link"><Heart size={20} /><span>Watchlist</span></Link>
+              <Link href="/lists" className="nav-link"><List size={20} /><span>Lists</span></Link>
+            </>
+          )}
+          <div className="auth-btn">
+            {isSignedIn ? (
+              <UserButton afterSignOutUrl="/" />
+            ) : (
+              <SignInButton mode="modal">
+                <button className="login-btn">Sign In</button>
+              </SignInButton>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
         .navbar {
           position: fixed;
           top: 0;
@@ -89,6 +172,10 @@ export default function Navbar() {
         .logo-icon {
           color: #6366f1;
         }
+        .search-wrapper {
+          position: relative;
+          width: 400px;
+        }
         .search-bar {
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid var(--glass-border);
@@ -97,7 +184,6 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           gap: 10px;
-          width: 400px;
           transition: all 0.3s ease;
         }
         .search-bar:focus-within {
@@ -113,6 +199,64 @@ export default function Navbar() {
           font-size: 0.9rem;
         }
         .search-icon {
+          color: var(--text-secondary);
+        }
+        .suggestions-dropdown {
+          position: absolute;
+          top: calc(100% + 12px);
+          left: 0;
+          right: 0;
+          background: rgba(15, 15, 18, 0.98);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          overflow: hidden;
+          z-index: 2000;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+          padding: 4px 0;
+        }
+        .suggestion-link {
+          display: block;
+          text-decoration: none;
+        }
+        .suggestion-item {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 8px 16px;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          cursor: pointer;
+        }
+        .suggestion-link:last-child .suggestion-item { border-bottom: none; }
+        .suggestion-item:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+        .suggestion-poster {
+          width: 45px;
+          height: 65px;
+          flex-shrink: 0;
+          border-radius: 6px;
+          overflow: hidden;
+          background: rgba(255, 255, 255, 0.03);
+          position: relative;
+        }
+        .suggestion-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+        .suggestion-title {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: white;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .suggestion-year {
+          font-size: 0.8rem;
           color: var(--text-secondary);
         }
         .nav-links {
@@ -142,11 +286,18 @@ export default function Navbar() {
         .login-btn:hover {
           transform: translateY(-2px);
         }
-        @media (max-width: 768px) {
-          .search-bar { width: 150px; }
+        .spinning {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @media (max-width: 900px) {
+          .search-wrapper { width: 200px; }
           .nav-link span { display: none; }
         }
       `}</style>
-        </nav>
-    );
+    </nav>
+  );
 }

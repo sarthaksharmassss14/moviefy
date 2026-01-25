@@ -28,8 +28,10 @@ export default async function WatchlistPage() {
     return (
         <main className="min-h-screen">
             <Navbar />
-            <div className="content-container">
-                <h1 className="page-title">My <span className="gradient-text">Watchlist</span></h1>
+            <div className="page-container">
+                <h1 className="hero-title" style={{ textAlign: 'left', fontSize: '3rem', marginBottom: '48px' }}>
+                    My <span className="gradient-text">Watchlist</span>
+                </h1>
 
                 <div className="movie-grid">
                     {filteredMovies.map((movie: any) => (
@@ -42,29 +44,6 @@ export default async function WatchlistPage() {
                     )}
                 </div>
             </div>
-
-            <style jsx>{`
-        .content-container {
-          max-width: 1400px;
-          margin: 120px auto 0;
-          padding: 0 40px;
-        }
-        .page-title {
-          font-size: 3rem;
-          margin-bottom: 48px;
-        }
-        .movie-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 30px;
-        }
-        .empty-state {
-          grid-column: 1 / -1;
-          padding: 100px;
-          text-align: center;
-          color: var(--text-secondary);
-        }
-      `}</style>
         </main>
     );
 }

@@ -3,11 +3,14 @@ import MovieCard from "@/components/MovieCard";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import { auth } from "@clerk/nextjs/server";
 import { getRecommendedMovies } from "@/lib/ai";
+import MoodSearch from "@/components/MoodSearch";
 
 async function getMovies() {
-  const trending = await fetchFromTMDB("/trending/movie/day");
-  const popular = await fetchFromTMDB("/movie/popular");
-  const topRated = await fetchFromTMDB("/movie/top_rated");
+  const [trending, popular, topRated] = await Promise.all([
+    fetchFromTMDB("/trending/movie/day"),
+    fetchFromTMDB("/movie/popular"),
+    fetchFromTMDB("/movie/top_rated"),
+  ]);
 
   return {
     trending: trending.results || [],
@@ -22,7 +25,6 @@ export default async function Home() {
 
   let recommendations = [];
   if (userId) {
-    // Combine some sources for candidates
     const candidates = [...trending, ...popular, ...topRated];
     recommendations = await getRecommendedMovies(userId, candidates);
   }
@@ -39,6 +41,7 @@ export default async function Home() {
       </section>
 
       <div className="content-container">
+        <MoodSearch />
         {recommendations.length > 0 && (
           <section className="movie-section">
             <h2 className="section-title">Picked For You</h2>
@@ -68,50 +71,6 @@ export default async function Home() {
           </div>
         </section>
       </div>
-
-      <style jsx>{`
-        .hero {
-          height: 60vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          padding: 0 20px;
-          position: relative;
-        }
-        .hero-title {
-          font-size: 4rem;
-          margin-bottom: 16px;
-          line-height: 1.1;
-        }
-        .hero-subtitle {
-          font-size: 1.25rem;
-          color: var(--text-secondary);
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        .content-container {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 0 40px 100px;
-        }
-        .movie-section {
-          margin-bottom: 60px;
-        }
-        .section-title {
-          font-size: 1.75rem;
-          margin-bottom: 24px;
-        }
-        .movie-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 30px;
-        }
-        @media (max-width: 768px) {
-          .hero-title { font-size: 2.5rem; }
-          .content-container { padding: 0 20px 60px; }
-        }
-      `}</style>
     </main>
   );
 }

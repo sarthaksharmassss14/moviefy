@@ -31,7 +31,7 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
             <Navbar />
 
             <div className="search-container">
-                <aside className="filters glass">
+                <aside className="sidebar-filters glass">
                     <h3>Filters</h3>
                     <div className="filter-group">
                         <h4>Genres</h4>
@@ -74,49 +74,6 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
                     </div>
                 </section>
             </div>
-
-            <style jsx>{`
-        .search-container {
-          max-width: 1400px;
-          margin: 100px auto 0;
-          padding: 0 40px;
-          display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 40px;
-        }
-        .filters {
-          padding: 24px;
-          height: fit-content;
-          position: sticky;
-          top: 100px;
-        }
-        .filters h3 { margin-bottom: 24px; }
-        .filter-group { margin-bottom: 32px; }
-        .filter-group h4 { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px; }
-        .filter-list { display: flex; flex-wrap: wrap; gap: 8px; }
-        .filter-item {
-          padding: 6px 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 8px;
-          font-size: 0.85rem;
-          transition: all 0.2s ease;
-        }
-        .filter-item:hover, .filter-item.active {
-          background: var(--primary-gradient);
-          color: white;
-        }
-        .results-section { flex: 1; }
-        .section-title { font-size: 2rem; margin-bottom: 32px; }
-        .movie-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 24px;
-        }
-        @media (max-width: 900px) {
-          .search-container { grid-template-columns: 1fr; }
-          .filters { position: static; }
-        }
-      `}</style>
         </main>
     );
 }

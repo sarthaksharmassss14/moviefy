@@ -2,54 +2,60 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Star, Play } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface MovieCardProps {
-    movie: {
-        id: number;
-        title: string;
-        poster_path: string;
-        vote_average: number;
-        release_date: string;
-    };
+  movie: {
+    id: number;
+    title: string;
+    poster_path: string;
+    vote_average: number;
+    release_date: string;
+  };
 }
 
 export default function MovieCard({ movie }: MovieCardProps) {
-    const imageUrl = movie.poster_path
-        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-        : "/no-poster.png";
+  const imageUrl = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : "/no-poster.png";
 
-    return (
-        <motion.div
-            whileHover={{ y: -10 }}
-            transition={{ type: "spring", stiffness: 300 }}
-            className="movie-card"
-        >
-            <Link href={`/movies/${movie.id}`}>
-                <div className="poster-container">
-                    <Image
-                        src={imageUrl}
-                        alt={movie.title}
-                        width={300}
-                        height={450}
-                        className="poster"
-                        priority={false}
-                    />
-                    <div className="card-overlay">
-                        <div className="rating-badge">
-                            <Star size={14} fill="#facc15" color="#facc15" />
-                            <span>{movie.vote_average.toFixed(1)}</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="card-info">
-                    <h3>{movie.title}</h3>
-                    <p>{new Date(movie.release_date).getFullYear() || "N/A"}</p>
-                </div>
-            </Link>
+  return (
+    <motion.div
+      whileHover={{ y: -10 }}
+      transition={{ type: "spring", stiffness: 300 }}
+      className="movie-card"
+    >
+      <Link href={`/movies/${movie.id}`}>
+        <div className="poster-container">
+          <Image
+            src={imageUrl}
+            alt={movie.title}
+            width={300}
+            height={450}
+            className="poster"
+            priority={false}
+          />
+          <div className="card-overlay">
+            <div className="rating-badge">
+              <Star size={14} fill="#facc15" color="#facc15" />
+              <span>{movie.vote_average.toFixed(1)}</span>
+            </div>
 
-            <style jsx>{`
+            <div className="play-icon-wrapper">
+              <div className="play-circle">
+                <Play size={32} fill="white" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="card-info">
+          <h3>{movie.title}</h3>
+          <p>{new Date(movie.release_date).getFullYear() || "N/A"}</p>
+        </div>
+      </Link>
+
+      <style jsx>{`
         .movie-card {
           width: 100%;
           cursor: pointer;
@@ -76,15 +82,34 @@ export default function MovieCard({ movie }: MovieCardProps) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%);
+          background: rgba(0, 0, 0, 0.4);
           display: flex;
-          align-items: flex-end;
-          padding: 16px;
+          align-items: center;
+          justify-content: center;
           opacity: 0;
-          transition: opacity 0.3s ease;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(2px);
         }
         .movie-card:hover .card-overlay {
           opacity: 1;
+        }
+        .play-icon-wrapper {
+          transform: scale(0.8);
+          transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .movie-card:hover .play-icon-wrapper {
+          transform: scale(1);
+        }
+        .play-circle {
+          width: 64px;
+          height: 64px;
+          background: var(--primary-gradient);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+          padding-left: 4px; /* Optical center for play icon */
         }
         .rating-badge {
           position: absolute;
@@ -116,6 +141,6 @@ export default function MovieCard({ movie }: MovieCardProps) {
           font-size: 0.85rem;
         }
       `}</style>
-        </motion.div>
-    );
+    </motion.div>
+  );
 }
