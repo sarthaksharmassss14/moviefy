@@ -1,43 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { submitReview } from "@/app/actions";
 import Toast from "./Toast";
 
-export default function ReviewForm({ movieId, movieDescription }: { movieId: number, movieDescription: string }) {
-  const [rating, setRating] = useState(0);
+export default function ReviewForm({
+  movieId,
+  movieDescription,
+  initialRating = 0,
+  initialContent = ""
+}: {
+  movieId: number,
+  movieDescription: string,
+  initialRating?: number,
+  initialContent?: string
+}) {
+  const [rating, setRating] = useState(initialRating);
   const [hover, setHover] = useState(0);
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(initialContent);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync state if props change (e.g. after revalidation)
+  useEffect(() => {
+    setRating(initialRating);
+  }, [initialRating]);
+
+  useEffect(() => {
+    setContent(initialContent);
+  }, [initialContent]);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: "success" | "error" }>({
     isVisible: false,
     message: "",
     type: "success",
   });
 
+  const handleStarClick = async (newRating: number) => {
+    if (newRating === rating) return;
+
+    setRating(newRating);
+    const formData = new FormData();
+    formData.append("movieId", movieId.toString());
+    formData.append("rating", newRating.toString());
+    formData.append("content", content); // Keep existing content
+    formData.append("movieDescription", movieDescription);
+
+    try {
+      await submitReview(formData);
+      setToast({ isVisible: true, message: "Rating saved!", type: "success" });
+    } catch (err) {
+      setToast({ isVisible: true, message: "Failed to save rating", type: "error" });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (rating === 0 && !content.trim()) return;
+    if (!content.trim()) return;
 
     setIsSubmitting(true);
     const formData = new FormData();
     formData.append("movieId", movieId.toString());
-    if (rating > 0) formData.append("rating", rating.toString());
+    formData.append("rating", rating.toString());
     formData.append("content", content);
     formData.append("movieDescription", movieDescription);
 
     try {
       await submitReview(formData);
-      setContent("");
-      setRating(0);
-      setToast({ isVisible: true, message: "Review shared with the community!", type: "success" });
+      setToast({ isVisible: true, message: "Review updated!", type: "success" });
     } catch (err) {
       setToast({ isVisible: true, message: "Something went wrong. Try again!", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const hasReviewChanged = content.trim() !== initialContent.trim();
+  const isButtonDisabled = isSubmitting || !hasReviewChanged || !content.trim();
 
   return (
     <>
@@ -55,7 +93,7 @@ export default function ReviewForm({ movieId, movieDescription }: { movieId: num
               <button
                 key={star}
                 type="button"
-                onClick={() => setRating(star)}
+                onClick={() => handleStarClick(star)}
                 onMouseEnter={() => setHover(star)}
                 onMouseLeave={() => setHover(0)}
                 className="star-btn"
@@ -71,16 +109,21 @@ export default function ReviewForm({ movieId, movieDescription }: { movieId: num
         </div>
 
         <div className="review-section">
-          <span className="section-label">Your Thoughts (Optional)</span>
+          <span className="section-label">Your Review</span>
           <textarea
-            placeholder="Write a few lines about the movie..."
+            placeholder="What did you think of the movie?"
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
         </div>
 
-        <button type="submit" disabled={isSubmitting || (rating === 0 && !content.trim())} className="submit-btn" style={{ marginTop: '10px' }}>
-          {isSubmitting ? "Saving..." : "Submit My Rating"}
+        <button
+          type="submit"
+          disabled={isButtonDisabled}
+          className="submit-btn"
+          style={{ marginTop: '10px' }}
+        >
+          {isSubmitting ? "Saving..." : "Submit Review"}
         </button>
 
         <style jsx>{`

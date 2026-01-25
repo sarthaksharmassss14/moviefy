@@ -26,6 +26,8 @@ export async function submitReview(formData: FormData) {
         ...(rating !== null && { rating }),
         ...(content.trim() && { content }),
         created_at: new Date().toISOString(),
+    }, {
+        onConflict: 'user_id,movie_id'
     });
 
     if (error) {

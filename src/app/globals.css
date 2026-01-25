@@ -356,6 +356,11 @@ button {
   color: var(--text-secondary);
 }
 
+.rev-rating {
+  display: flex;
+  gap: 4px;
+}
+
 /* Search Page */
 .search-container {
   max-width: 1400px;

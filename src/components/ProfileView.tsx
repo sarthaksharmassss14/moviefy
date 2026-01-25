@@ -157,36 +157,48 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
                         <div className="reviews-list">
                             {reviews.map((item: any) => (
                                 <div key={item.id} className="review-item glass">
-                                    <Link href={`/movies/${item.movie?.id}`} className="review-link-wrapper">
-                                        <div className="review-movie-poster">
-                                            <img
-                                                src={`https://image.tmdb.org/t/p/w200${item.movie?.poster_path}`}
-                                                alt={item.movie?.title}
-                                            />
-                                        </div>
-                                        <div className="review-content">
-                                            <div className="review-header-inner">
-                                                <h3 className="review-movie-title">
-                                                    {item.movie?.title || "Unknown Movie"}
-                                                </h3>
-                                                <div className="review-meta">
-                                                    <div className="rating-stars">
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                size={16}
-                                                                fill={i < item.rating ? "#facc15" : "none"}
-                                                                color={i < item.rating ? "#facc15" : "gray"}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <span className="dot">•</span>
-                                                    <span className="date">
-                                                        {new Date(item.created_at).toLocaleDateString()}
-                                                    </span>
-                                                </div>
+                                    <Link
+                                        href={`/movies/${item.movie?.id}`}
+                                        className="review-link-wrapper"
+                                        style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'flex-start', width: '100%' }}
+                                    >
+                                        <div
+                                            className="review-sidebar"
+                                            style={{ width: '90px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}
+                                        >
+                                            <div className="review-movie-poster" style={{ width: '100%' }}>
+                                                <img
+                                                    src={`https://image.tmdb.org/t/p/w200${item.movie?.poster_path}`}
+                                                    alt={item.movie?.title}
+                                                    style={{ width: '100%', borderRadius: '6px', objectFit: 'cover', aspectRatio: '2/3', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
+                                                />
                                             </div>
-                                            {item.content && <p className="review-text">"{item.content}"</p>}
+                                            <h3 className="review-movie-title" style={{ fontSize: '0.8rem', textAlign: 'center', lineHeight: '1.2', color: 'white', wordBreak: 'break-word' }}>
+                                                {item.movie?.title || "Unknown Movie"}
+                                            </h3>
+                                            <div className="rating-stars" style={{ display: 'flex', gap: '2px', justifyContent: 'center' }}>
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        size={10}
+                                                        fill={i < item.rating ? "#facc15" : "none"}
+                                                        color={i < item.rating ? "#facc15" : "gray"}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="review-content" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                                            <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                                                <span className="date" style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                    {new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                </span>
+                                            </div>
+                                            {item.content && (
+                                                <p className="review-text" style={{ fontSize: '0.95rem', lineHeight: '1.6', color: '#d1d5db', whiteSpace: 'pre-wrap' }}>
+                                                    {item.content}
+                                                </p>
+                                            )}
                                         </div>
                                     </Link>
                                 </div>
@@ -496,21 +508,21 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
         .reviews-list {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
         .review-item {
-            padding: 24px;
+            padding: 16px;
             transition: transform 0.2s;
         }
 
         .review-item:hover {
-            transform: translateX(5px);
+            transform: translateX(4px);
         }
 
         .review-link-wrapper {
             display: flex;
-            gap: 24px;
+            gap: 16px;
             width: 100%;
             align-items: flex-start;
         }
@@ -520,7 +532,7 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
         }
 
         .review-movie-poster img {
-            width: 100px;
+            width: 70px;
             border-radius: 8px;
             aspect-ratio: 2/3;
             object-fit: cover;
@@ -529,13 +541,16 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
 
         .review-content {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .review-header-inner {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .review-movie-title {

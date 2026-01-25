@@ -164,7 +164,12 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
               <section className="reviews-section">
                 <h2>User Reviews</h2>
                 {userId ? (
-                  <ReviewForm movieId={movie.id} movieDescription={movie.overview} />
+                  <ReviewForm
+                    movieId={movie.id}
+                    movieDescription={movie.overview}
+                    initialRating={reviews?.find(r => r.user_id === userId)?.rating || 0}
+                    initialContent={reviews?.find(r => r.user_id === userId)?.content || ""}
+                  />
                 ) : (
                   <div className="login-prompt glass" style={{ padding: '20px', textAlign: 'center' }}>
                     <p>Sign in to leave a review</p>
@@ -172,20 +177,17 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                 )}
 
                 <div className="reviews-list">
-                  {reviews?.map((r: any) => (
+                  {reviews?.map((r: any) => r.content && (
                     <div key={r.id} className="review-card glass">
                       <div className="rev-header">
-                        <div className="rev-rating">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} size={14} fill={i < r.rating ? "#facc15" : "none"} color={i < r.rating ? "#facc15" : "var(--text-secondary)"} />
-                          ))}
-                        </div>
                         <span className="rev-date">{new Date(r.created_at).toLocaleDateString()}</span>
                       </div>
                       <p>{r.content}</p>
                     </div>
                   ))}
                 </div>
+
+
               </section>
             </div>
           </div>
