@@ -3,11 +3,18 @@
 import { useState } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
 import MovieCard from "./MovieCard";
+import ConfirmModal from "./ConfirmModal";
 
 export default function MoodSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean, title: string, message: string, variant: "danger" | "success" | "info" }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    variant: "info"
+  });
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,21 +36,41 @@ export default function MoodSearch() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(`AI Error: ${data.error || "Server issue"}`);
+        setAlertConfig({
+          isOpen: true,
+          title: "AI Analysis Error",
+          message: data.error || "There was an issue processing your request on the AI server.",
+          variant: "danger"
+        });
         return;
       }
 
       setResults(data.results || []);
       if (data.results?.length === 0) {
-        alert("No movies found for this mood. Try describing it differently!");
+        setAlertConfig({
+          isOpen: true,
+          title: "No Matches",
+          message: "No movies found for this mood. Try describing it with different words or genres!",
+          variant: "info"
+        });
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
-        alert("AI is taking too long. The model might be loading on HuggingFace—please wait 10 seconds and try again!");
+        setAlertConfig({
+          isOpen: true,
+          title: "AI Model Loading",
+          message: "The AI model is waking up on our servers. This usually takes about 10-15 seconds. Please try clicking discover again in a moment!",
+          variant: "info"
+        });
       } else {
         console.error(err);
-        alert("The server is temporarily busy. Please refresh the page and try once more.");
+        setAlertConfig({
+          isOpen: true,
+          title: "Temporary Hiccup",
+          message: "The server is a bit busy right now. Please refresh the page and try your search again.",
+          variant: "danger"
+        });
       }
     } finally {
       setIsLoading(false);
@@ -153,6 +180,16 @@ export default function MoodSearch() {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      <ConfirmModal
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        mode="alert"
+        confirmLabel="Got it"
+      />
     </div>
   );
 }

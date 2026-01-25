@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { Play, X } from "lucide-react";
 import { createPortal } from "react-dom";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function MoviePlayer({ tmdbId, imdbId, originalLanguage }: { tmdbId: number; imdbId?: string; originalLanguage?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isErrorOpen, setIsErrorOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -20,7 +22,7 @@ export default function MoviePlayer({ tmdbId, imdbId, originalLanguage }: { tmdb
 
   const toggleModal = () => {
     if (!tmdbId && !imdbId) {
-      alert("This movie is currently unavailable for playback.");
+      setIsErrorOpen(true);
       return;
     }
     setIsOpen(!isOpen);
@@ -71,6 +73,16 @@ export default function MoviePlayer({ tmdbId, imdbId, originalLanguage }: { tmdb
       )}
 
       {mounted && createPortal(modalContent, document.body)}
+
+      <ConfirmModal
+        isOpen={isErrorOpen}
+        onClose={() => setIsErrorOpen(false)}
+        title="Playback Unavailable"
+        message="This movie is currently unavailable for playback on our primary server. Please try again later."
+        variant="info"
+        mode="alert"
+        confirmLabel="Understood"
+      />
     </>
   );
 }

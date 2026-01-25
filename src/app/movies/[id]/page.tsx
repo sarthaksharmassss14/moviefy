@@ -1,12 +1,14 @@
 import Navbar from "@/components/Navbar";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import Image from "next/image";
-import { Star, Clock, Calendar, Globe, Heart, Play } from "lucide-react";
+import { Star, Clock, Calendar, Globe, Heart } from "lucide-react";
 import ReviewForm from "@/components/ReviewForm";
 import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
 import { toggleWatchlist } from "@/app/actions";
 import MoviePlayer from "@/components/MoviePlayer";
+import AddToListButton from "@/components/AddToListButton";
+import WatchlistButton from "@/components/WatchlistButton";
 
 async function getMovieDetails(id: string) {
   const [movie, credits, videos] = await Promise.all([
@@ -41,7 +43,10 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
     if (reviewError) console.error("[MoviePage] Supabase Review Error:", reviewError);
 
     let isInWatchlist = false;
+    let userLists: any[] = [];
+
     if (userId) {
+      // Check Watchlist
       const { data, error: watchlistError } = await supabase
         .from("watchlist")
         .select()
@@ -53,6 +58,14 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
         console.error("[MoviePage] Supabase Watchlist Error:", watchlistError);
       }
       isInWatchlist = !!data;
+
+      // Fetch User Lists for AddToList dropdown
+      const { data: listsData } = await supabase
+        .from('lists')
+        .select('id, name')
+        .eq('user_id', userId);
+
+      if (listsData) userLists = listsData;
     }
 
     const backgroundUrl = movie.backdrop_path
@@ -115,12 +128,8 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
 
               <div className="actions" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <MoviePlayer tmdbId={movie.id} imdbId={movie.imdb_id} originalLanguage={movie.original_language} />
-                <form action={toggleWatchlist.bind(null, movie.id)}>
-                  <button className={`action-btn ${isInWatchlist ? 'active' : ''}`}>
-                    <Heart size={20} fill={isInWatchlist ? "#ef4444" : "none"} />
-                    {isInWatchlist ? "In Watchlist" : "Add to Watchlist"}
-                  </button>
-                </form>
+                <WatchlistButton movieId={movie.id} initialState={isInWatchlist} />
+                <AddToListButton movieId={movie.id} lists={userLists} userId={userId || ""} />
               </div>
             </div>
           </div>

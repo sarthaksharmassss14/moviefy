@@ -15,8 +15,9 @@ export async function GET(request: Request) {
         const suggestions = data.results.slice(0, 5).map((m: any) => ({
             id: m.id,
             title: m.title,
-            year: m.release_date ? new Date(m.release_date).getFullYear() : "",
-            poster: m.poster_path,
+            release_date: m.release_date || "",
+            poster_path: m.poster_path,
+            vote_average: m.vote_average || 0
         }));
 
         return NextResponse.json({ results: suggestions });

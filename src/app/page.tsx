@@ -12,10 +12,14 @@ async function getMovies() {
     fetchFromTMDB("/movie/top_rated"),
   ]);
 
+  const indianLanguages = ['hi', 'te', 'ta', 'kn', 'ml', 'pa', 'bn'];
+  const filterIndian = (movies: any[]) =>
+    (movies || []).filter(movie => !indianLanguages.includes(movie.original_language));
+
   return {
-    trending: trending.results || [],
-    popular: popular.results || [],
-    topRated: topRated.results || [],
+    trending: filterIndian(trending.results),
+    popular: filterIndian(popular.results),
+    topRated: filterIndian(topRated.results),
   };
 }
 

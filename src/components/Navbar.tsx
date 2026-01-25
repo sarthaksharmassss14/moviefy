@@ -120,16 +120,16 @@ export default function Navbar() {
         </div>
 
         <div className="nav-links">
-          <Link href="/" className="nav-link"><Home size={20} /><span>Home</span></Link>
-          {isSignedIn && (
-            <>
-              <Link href="/watchlist" className="nav-link"><Heart size={20} /><span>Watchlist</span></Link>
-              <Link href="/lists" className="nav-link"><List size={20} /><span>Lists</span></Link>
-            </>
-          )}
           <div className="auth-btn">
             {isSignedIn ? (
-              <UserButton afterSignOutUrl="/" />
+              <div className="user-menu">
+                <Link href="/profile" className="dashboard-link">
+                  My Dashboard
+                </Link>
+                <div className="user-btn-wrapper">
+                  <UserButton afterSignOutUrl="/" />
+                </div>
+              </div>
             ) : (
               <SignInButton mode="modal">
                 <button className="login-btn">Sign In</button>
@@ -296,6 +296,30 @@ export default function Navbar() {
         @media (max-width: 900px) {
           .search-wrapper { width: 200px; }
           .nav-link span { display: none; }
+          .dashboard-link { display: none; }
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 20px; /* Explicit gap */
+        }
+        
+        .dashboard-link {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+        
+        .dashboard-link:hover {
+            color: white;
+        }
+
+        .user-btn-wrapper {
+            display: flex;
+            align-items: center;
         }
       `}</style>
     </nav>
