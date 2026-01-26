@@ -17,36 +17,46 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
     const { id } = await params;
     const { person, movieCredits } = await getPersonDetails(id);
 
-    // 1. FILTER: Only show movies where they are the 'Director'
-    const directedCredits = (movieCredits.crew || []).filter((m: any) => m.job === "Director");
-
-    // De-duplicate
-    const uniqueDirectedMap = new Map();
-    directedCredits.forEach((m: any) => {
-        if (!uniqueDirectedMap.has(m.id)) {
-            uniqueDirectedMap.set(m.id, m);
-        }
+    // 1. PROCESS ACTING CREDITS
+    const actingCredits = (movieCredits.cast || []).filter((m: any) => m.poster_path);
+    const uniqueActing = new Map();
+    actingCredits.forEach((m: any) => {
+        if (!uniqueActing.has(m.id)) uniqueActing.set(m.id, m);
     });
+    const sortedActing = Array.from(uniqueActing.values())
+        .sort((a: any, b: any) => (b.vote_count * b.vote_average) - (a.vote_count * a.vote_average))
+        .slice(0, 30);
 
-    // 2. SORT: Best rated directors work
-    const candidates = Array.from(uniqueDirectedMap.values())
-        .filter((m: any) => m.poster_path)
-        .sort((a: any, b: any) => b.vote_average - a.vote_average);
+    // 2. PROCESS DIRECTING WORK
+    const directedCredits = (movieCredits.crew || []).filter((m: any) => m.job === "Director" && m.poster_path);
+    const uniqueDirected = new Map();
+    directedCredits.forEach((m: any) => {
+        if (!uniqueDirected.has(m.id)) uniqueDirected.set(m.id, m);
+    });
+    const sortedDirected = Array.from(uniqueDirected.values())
+        .sort((a: any, b: any) => b.vote_average - a.vote_average)
+        .slice(0, 30);
 
-    // 3. DURATION: Fetch full details for top movies to ensure they are >= 60 mins
-    const movies: any[] = [];
-    // We process top 30 to find at least 15 feature films
-    for (const m of candidates.slice(0, 30)) {
+    // 3. FETCH RUNTIME for Directing work
+    const processedDirected: any[] = [];
+    for (const m of sortedDirected.slice(0, 15)) {
         try {
             const details = await fetchFromTMDB(`/movie/${m.id}`);
-            if (details.runtime >= 60) {
-                movies.push(details);
-            }
+            if (details.runtime >= 60) processedDirected.push(details);
         } catch (e) {
-            // If details fetch fails, only include if it looks like a real movie (has popularity)
-            if (m.vote_count > 10) movies.push(m);
+            if (m.vote_count > 10) processedDirected.push(m);
         }
-        if (movies.length >= 20) break;
+    }
+
+    // 4. FETCH RUNTIME for top Acting work
+    const processedActing: any[] = [];
+    for (const m of sortedActing.slice(0, 15)) {
+        try {
+            const details = await fetchFromTMDB(`/movie/${m.id}`);
+            if (details.runtime >= 60) processedActing.push(details);
+        } catch (e) {
+            if (m.vote_count > 10) processedActing.push(m);
+        }
     }
 
     return (
@@ -95,20 +105,37 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 </div>
             </div>
 
-            <div className="max-w-[1200px] mx-auto px-6 mt-5">
-                <h2 className="text-3xl font-bold mb-8">
-                    Directed Work <span className="text-zinc-400 text-2xl">(Sorted by Rating)</span>
-                </h2>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-8">
-                    {movies.length > 0 ? (
-                        movies.map((movie: any) => (
+            {processedActing.length > 0 && (
+                <div className="max-w-[1200px] mx-auto px-6 mt-12">
+                    <h2 className="text-3xl font-bold mb-8">
+                        Filmography <span className="text-zinc-400 text-2xl">(As Actor)</span>
+                    </h2>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-8">
+                        {processedActing.map((movie: any) => (
                             <MovieCard key={movie.id} movie={movie} />
-                        ))
-                    ) : (
-                        <p className="text-zinc-500 italic">No full-length feature directed movies found.</p>
-                    )}
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {processedDirected.length > 0 && (
+                <div className="max-w-[1200px] mx-auto px-6 mt-16">
+                    <h2 className="text-3xl font-bold mb-8 border-t border-white/5 pt-12">
+                        Directed Work <span className="text-zinc-400 text-2xl">(Director)</span>
+                    </h2>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-8">
+                        {processedDirected.map((movie: any) => (
+                            <MovieCard key={movie.id} movie={movie} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {processedActing.length === 0 && processedDirected.length === 0 && (
+                <div className="max-w-[1200px] mx-auto px-6 mt-20 text-center">
+                    <p className="text-zinc-500 italic text-xl">No feature films found for this person.</p>
+                </div>
+            )}
         </main>
     );
 }

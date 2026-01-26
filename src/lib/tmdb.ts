@@ -27,39 +27,47 @@ export async function fetchFromTMDB(endpoint: string, params: Record<string, str
         const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
         try {
-            console.log(`[TMDB] Fetching: ${endpoint} (Attempt ${attempts + 1})`);
-
             const response = await fetch(url, {
                 signal: controller.signal,
+                next: { revalidate: 3600 * 24 } // Cache for 24 hours
             });
 
             clearTimeout(timeoutId);
 
             if (!response.ok) {
                 const errorBody = await response.text();
-                console.error(`[TMDB API Error] ${response.status}: ${errorBody}`);
-                throw new Error(`TMDB Server returned ${response.status}`);
+
+                // If 404, don't retry, just fail fast
+                if (response.status === 404) {
+                    throw new Error(`TMDB 404: Not Found at ${endpoint}`);
+                }
+
+                throw new Error(`TMDB Server returned ${response.status}: ${errorBody}`);
             }
 
             return await response.json();
         } catch (error: any) {
             clearTimeout(timeoutId);
-            attempts++;
 
+            // Don't retry on 404 or specific errors
+            if (error.message.includes("404")) {
+                throw error;
+            }
+
+            attempts++;
             let errorMessage = error.message;
-            if (error.name === 'AbortError') errorMessage = "Request timed out (10s)";
+            if (error.name === 'AbortError') errorMessage = "Request timed out (20s)";
 
             if (attempts < maxRetries) {
                 console.warn(`[TMDB] Transient error (Attempt ${attempts}): ${errorMessage}. Retrying...`);
             } else {
-                console.error(`[TMDB Fetch Failure] Final Attempt ${attempts}:`, error.message, error.cause || "");
+                console.error(`[TMDB Fetch Failure] Final Attempt ${attempts}:`, error.message);
             }
 
             if (attempts >= maxRetries) {
-                throw new Error(`TMDB connection failed after ${maxRetries} attempts. (Error: ${errorMessage})`);
+                throw new Error(`TMDB failed after ${maxRetries} attempts: ${errorMessage}`);
             }
-            // exponential backoff
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+            await new Promise(resolve => setTimeout(resolve, 500 * attempts));
         }
     }
 }

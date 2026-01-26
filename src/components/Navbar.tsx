@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, useUser, SignInButton } from "@clerk/nextjs";
-import { Search, Film, Heart, List, Home, Loader2 } from "lucide-react";
+import { UserButton, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
+import { Search, Film, Heart, List, Home, Loader2, LogOut } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -75,7 +75,7 @@ export default function Navbar() {
             {isLoading ? <Loader2 className="search-icon spinning" /> : <Search className="search-icon" />}
             <input
               type="text"
-              placeholder="Search movies, genres, mood..."
+              placeholder="Search movies..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onFocus={() => search.length >= 2 && setShowSuggestions(true)}
@@ -120,6 +120,9 @@ export default function Navbar() {
         </div>
 
         <div className="nav-links">
+          <Link href="/directors" className="nav-link-directors">
+            Directors
+          </Link>
           <div className="auth-btn">
             {isSignedIn ? (
               <div className="user-menu">
@@ -129,6 +132,12 @@ export default function Navbar() {
                 <div className="user-btn-wrapper">
                   <UserButton afterSignOutUrl="/" />
                 </div>
+                <SignOutButton>
+                  <button className="logout-btn-nav">
+                    <LogOut size={16} />
+                    <span>Log Out</span>
+                  </button>
+                </SignOutButton>
               </div>
             ) : (
               <SignInButton mode="modal">
@@ -286,6 +295,23 @@ export default function Navbar() {
         .login-btn:hover {
           transform: translateY(-2px);
         }
+        .logout-btn-nav {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #ef4444;
+          font-weight: 600;
+          font-size: 0.85rem;
+          padding: 6px 12px;
+          border-radius: 8px;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          transition: all 0.2s;
+        }
+        .logout-btn-nav:hover {
+          background: rgba(239, 68, 68, 0.2);
+          transform: translateY(-1px);
+        }
         .spinning {
           animation: spin 1s linear infinite;
         }
@@ -293,10 +319,21 @@ export default function Navbar() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        .nav-link-directors {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+        .nav-link-directors:hover {
+            color: white;
+        }
         @media (max-width: 900px) {
           .search-wrapper { width: 200px; }
           .nav-link span { display: none; }
           .dashboard-link { display: none; }
+          .nav-link-directors { display: none; }
         }
         
         .user-menu {

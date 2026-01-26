@@ -67,7 +67,7 @@ export default function AddToListButton({ movieId, lists, userId }: { movieId: n
         }
     };
 
-    if (!userId) return null;
+    // Removed early null return for guest users to allow showing a login prompt
 
     if (!lists || lists.length === 0) {
         return (
@@ -93,7 +93,18 @@ export default function AddToListButton({ movieId, lists, userId }: { movieId: n
         <div className="add-to-list-wrapper">
             <button
                 className={`action-btn ${isOpen ? 'active' : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    if (!userId) {
+                        setAlertConfig({
+                            isOpen: true,
+                            title: "Login Required",
+                            message: "You need to be logged in to create or add movies to collections.",
+                            variant: "info"
+                        });
+                        return;
+                    }
+                    setIsOpen(!isOpen);
+                }}
             >
                 <ListPlus size={20} />
                 Add to List
@@ -283,11 +294,14 @@ export default function AddToListButton({ movieId, lists, userId }: { movieId: n
             <ConfirmModal
                 isOpen={alertConfig.isOpen}
                 onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={() => {
+                    if (!userId) router.push("/sign-in");
+                }}
                 title={alertConfig.title}
                 message={alertConfig.message}
                 variant={alertConfig.variant}
-                mode="alert"
-                confirmLabel="Got it"
+                mode={!userId ? "confirm" : "alert"}
+                confirmLabel={!userId ? "Login Now" : "Got it"}
             />
         </div>
     );

@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { updateUserTaste } from "@/lib/ai";
+import { updateUserTaste, generateEmbedding } from "@/lib/ai";
 
 export async function submitReview(formData: FormData) {
     const { userId } = await auth();
@@ -15,6 +15,15 @@ export async function submitReview(formData: FormData) {
     const movieDescription = formData.get("movieDescription") as string;
 
     const rating = ratingStr ? parseInt(ratingStr) : null;
+    let movieEmbedding: number[] | null = null;
+
+    if (movieDescription) {
+        try {
+            movieEmbedding = await generateEmbedding(movieDescription);
+        } catch (e) {
+            console.warn("[submitReview] Embedding failed:", e);
+        }
+    }
 
     if (!rating && !content.trim()) {
         throw new Error("Please provide either a rating or a review.");
@@ -25,18 +34,19 @@ export async function submitReview(formData: FormData) {
         movie_id: movieId,
         ...(rating !== null && { rating }),
         ...(content.trim() && { content }),
+        ...(movieEmbedding && { embedding: movieEmbedding }),
         created_at: new Date().toISOString(),
     }, {
         onConflict: 'user_id,movie_id'
     });
 
     if (error) {
-        console.error("[submitReview] Supabase Error:", error.message, error.details);
+        console.error("[submitReview] Supabase Error:", error.message);
         throw new Error(`Database error: ${error.message}`);
     }
 
     // Update user taste profile for RAG if high rating is given
-    if (rating && rating >= 4) {
+    if (rating && rating >= 4 && movieDescription) {
         await updateUserTaste(userId, movieDescription);
     }
 

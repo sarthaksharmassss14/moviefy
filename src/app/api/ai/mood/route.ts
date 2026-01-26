@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
                 if (bestMatch) {
                     // HOLLYWOOD PRIORITY: Filter out non-English movies for general queries
-                    const isGeneralQuery = !/(hindi|indian|bollywood|french|korean|anime|japanese|spanish|telugu|tamil|malayalam|kannada)/i.test(query);
+                    const isGeneralQuery = !/(hindi|indian|bollywood|french|korean|anime|japanese|spanish|telugu|tamil|malayalam|kannada|italian|chinese|german|russian|portuguese|arabic|persian|greek|turkish|danish|dutch|swedish|asian)/i.test(query);
                     if (isGeneralQuery && bestMatch.original_language !== 'en') {
                         console.log(`[AI Mood] Filtering out non-English movie: ${bestMatch.title} (${bestMatch.original_language})`);
                         return null;

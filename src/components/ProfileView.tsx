@@ -1,8 +1,8 @@
 "use client";
 
-import { UserProfile } from "@clerk/nextjs";
+import { UserProfile, SignOutButton } from "@clerk/nextjs";
 import MovieCard from "@/components/MovieCard";
-import { Star, Heart, MessageSquare, Settings, Film, ArrowLeft, List, Home, PlusCircle, X, Loader2 } from "lucide-react";
+import { Star, Heart, MessageSquare, Settings, Film, ArrowLeft, List, Home, PlusCircle, X, Loader2, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -120,6 +120,13 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
                         <Settings size={18} />
                         Settings
                     </button>
+                    <div className="divider"></div>
+                    <SignOutButton>
+                        <button className="tab-btn logout-btn-dashboard">
+                            <LogOut size={18} />
+                            Logout
+                        </button>
+                    </SignOutButton>
                 </div>
             </div>
 
@@ -472,6 +479,14 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
             background: var(--primary-gradient);
             color: white;
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .logout-btn-dashboard {
+            color: #ef4444 !important;
+        }
+        
+        .logout-btn-dashboard:hover {
+            background: rgba(239, 68, 68, 0.1) !important;
         }
 
         .section-block {

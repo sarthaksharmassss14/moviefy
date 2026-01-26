@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { submitReview } from "@/app/actions";
-import Toast from "./Toast";
+import ConfirmModal from "./ConfirmModal";
 
 export default function ReviewForm({
   movieId,
@@ -29,10 +29,16 @@ export default function ReviewForm({
   useEffect(() => {
     setContent(initialContent);
   }, [initialContent]);
-  const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: "success" | "error" }>({
-    isVisible: false,
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: "success" | "danger" | "info"
+  }>({
+    isOpen: false,
+    title: "",
     message: "",
-    type: "success",
+    variant: "success",
   });
 
   const handleStarClick = async (newRating: number) => {
@@ -47,9 +53,19 @@ export default function ReviewForm({
 
     try {
       await submitReview(formData);
-      setToast({ isVisible: true, message: "Rating saved!", type: "success" });
+      setModalConfig({
+        isOpen: true,
+        title: "Rating Saved!",
+        message: "Your rating has been successfully saved. It will help personalize your recommendations!",
+        variant: "success"
+      });
     } catch (err) {
-      setToast({ isVisible: true, message: "Failed to save rating", type: "error" });
+      setModalConfig({
+        isOpen: true,
+        title: "Update Failed",
+        message: "We couldn't save your rating. Please check your connection and try again.",
+        variant: "danger"
+      });
     }
   };
 
@@ -66,9 +82,19 @@ export default function ReviewForm({
 
     try {
       await submitReview(formData);
-      setToast({ isVisible: true, message: "Review updated!", type: "success" });
+      setModalConfig({
+        isOpen: true,
+        title: "Review Saved!",
+        message: "Your review has been saved. The community will appreciate your input!",
+        variant: "success"
+      });
     } catch (err) {
-      setToast({ isVisible: true, message: "Something went wrong. Try again!", type: "error" });
+      setModalConfig({
+        isOpen: true,
+        title: "Submission Error",
+        message: "Something went wrong while updating your review. Please try again.",
+        variant: "danger"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -79,9 +105,14 @@ export default function ReviewForm({
 
   return (
     <>
-      <Toast
-        {...toast}
-        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+      <ConfirmModal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        variant={modalConfig.variant}
+        mode="alert"
+        confirmLabel="Awesome"
       />
       <form onSubmit={handleSubmit} className="review-form glass">
         <h3>Rate or Review</h3>

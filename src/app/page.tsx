@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import MovieCard from "@/components/MovieCard";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import { auth } from "@clerk/nextjs/server";
-import { getRecommendedMovies } from "@/lib/ai";
+import { getRecommendedMovies, getPickedForYou } from "@/lib/ai";
 import MoodSearch from "@/components/MoodSearch";
 import PickedForYouSection from "@/components/PickedForYouSection";
 
@@ -32,8 +32,19 @@ export default async function Home() {
 
   let recommendations = [];
   if (userId) {
-    const candidates = [...trending, ...popular, ...topRated];
-    recommendations = await getRecommendedMovies(userId, candidates);
+    const [proactive, scored] = await Promise.all([
+      getPickedForYou(userId),
+      getRecommendedMovies(userId, [...trending, ...popular, ...topRated])
+    ]);
+
+    // Combine and de-duplicate
+    const combined = [...proactive, ...scored];
+    const uniqueIds = new Set();
+    recommendations = combined.filter(m => {
+      if (uniqueIds.has(m.id)) return false;
+      uniqueIds.add(m.id);
+      return true;
+    }).slice(0, 6);
   }
 
   return (

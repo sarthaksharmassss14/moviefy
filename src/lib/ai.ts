@@ -3,42 +3,44 @@ import { supabase } from "./supabase";
 
 const hf = new HfInference(process.env.HF_TOKEN);
 
-export async function generateEmbedding(text: string): Promise<number[]> {
+export async function generateEmbedding(text: string | string[]): Promise<number[] | number[][]> {
     const result = await hf.featureExtraction({
         model: "sentence-transformers/all-MiniLM-L6-v2",
         inputs: text,
     });
-    return result as number[];
+    return result as any;
 }
 
 export async function updateUserTaste(userId: string, movieDescription: string) {
-    console.log(`[AI] Updating taste for user ${userId}...`);
+    console.log(`[AI] Updating taste profile for user ${userId}...`);
     try {
-        const newEmbedding = await generateEmbedding(movieDescription);
+        const newEmbedding = await generateEmbedding(movieDescription) as number[];
 
         const { data: existing, error: fetchError } = await supabase
             .from("user_tastes")
-            .select("taste_vector")
+            .select("taste_vector, rating_count")
             .eq("user_id", userId)
             .single();
 
-        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+        if (fetchError && fetchError.code !== 'PGRST116') {
             console.error("[AI] Error fetching user taste:", fetchError);
         }
 
         let updatedVector = newEmbedding;
+        let newCount = 1;
 
         if (existing?.taste_vector) {
-            // Parse existing vector (Supabase sometimes returns it as a string)
-            let currentVector: number[] = [];
-            if (typeof existing.taste_vector === 'string') {
-                currentVector = JSON.parse(existing.taste_vector);
-            } else {
-                currentVector = existing.taste_vector;
-            }
+            const currentVector: number[] = typeof existing.taste_vector === 'string'
+                ? JSON.parse(existing.taste_vector)
+                : existing.taste_vector;
 
-            // Moving average: (Old + New) / 2
-            updatedVector = currentVector.map((val, i) => (val + newEmbedding[i]) / 2);
+            const currentCount = existing.rating_count || 1;
+            newCount = currentCount + 1;
+
+            // True Average: ((OldVector * Count) + NewVector) / (Count + 1)
+            updatedVector = currentVector.map((val, i) =>
+                ((val * currentCount) + newEmbedding[i]) / newCount
+            );
         }
 
         const { error: upsertError } = await supabase
@@ -46,20 +48,19 @@ export async function updateUserTaste(userId: string, movieDescription: string) 
             .upsert({
                 user_id: userId,
                 taste_vector: updatedVector,
+                rating_count: newCount,
                 updated_at: new Date().toISOString()
             });
 
-        if (upsertError) {
-            console.error("[AI] Failed to update user taste:", upsertError);
-            throw upsertError;
-        }
-        console.log(`[AI] Successfully updated taste profile!`);
+        if (upsertError) throw upsertError;
+        console.log(`[AI] Taste profile updated with ${newCount} samples.`);
     } catch (e: any) {
         console.error("[AI] Critical error in updateUserTaste:", e.message);
     }
 }
 
 export async function getRecommendedMovies(userId: string, candidateMovies: any[]) {
+    console.log(`[AI] Scoring ${candidateMovies.length} local candidates for user ${userId}...`);
     try {
         const { data: profile } = await supabase
             .from("user_tastes")
@@ -67,45 +68,78 @@ export async function getRecommendedMovies(userId: string, candidateMovies: any[
             .eq("user_id", userId)
             .single();
 
-        // FALLBACK 1: If no profile exists, return candidates directly (Trending/Popular)
-        if (!profile?.taste_vector) {
-            console.log(`[AI] No taste profile found for ${userId}. Returning trending movies.`);
-            return candidateMovies.slice(0, 10);
+        if (!profile?.taste_vector) return candidateMovies.slice(0, 10);
+
+        let userVector: number[] = typeof profile.taste_vector === 'string'
+            ? JSON.parse(profile.taste_vector)
+            : profile.taste_vector as any;
+
+        const candidates = candidateMovies.slice(0, 15); // Limit to 15 for speed
+        const texts = candidates.map(m => m.overview || m.title || "");
+
+        // Batch generate embeddings
+        const movieEmbeddings = await generateEmbedding(texts) as number[][];
+
+        const scoredMovies = candidates.map((movie, index) => {
+            const score = cosineSimilarity(userVector, movieEmbeddings[index]);
+            return { ...movie, similarityScore: score };
+        });
+
+        return scoredMovies.sort((a, b) => b.similarityScore - a.similarityScore);
+    } catch (e: any) {
+        console.error("[AI] Local Scoring Error:", e.message);
+        return candidateMovies.slice(0, 10);
+    }
+}
+
+export async function getPickedForYou(userId: string) {
+    console.log(`[AI] Generating proactive recommendations for user ${userId}...`);
+    try {
+        // 1. Get user taste vector and rated movies
+        const [tasteRes, ratedRes] = await Promise.all([
+            supabase.from("user_tastes").select("taste_vector").eq("user_id", userId).single(),
+            supabase.from("reviews").select("movie_id").eq("user_id", userId)
+        ]);
+
+        if (!tasteRes.data?.taste_vector) {
+            console.log("[AI] No taste profile found. Falling back to trending.");
+            return [];
         }
 
-        let userVector: number[] = [];
-        if (typeof profile.taste_vector === 'string') {
-            userVector = JSON.parse(profile.taste_vector);
-        } else {
-            userVector = profile.taste_vector as any; // Cast for TS
+        const userVector = tasteRes.data.taste_vector;
+        const excludedIds = (ratedRes.data || []).map(r => r.movie_id);
+
+        // 2. Vector search in database for similar movie embeddings
+        const { data: matched, error: rpcError } = await supabase.rpc('match_movie_recommendations', {
+            query_embedding: userVector,
+            match_threshold: 0.3, // Lowered from 0.4 for better discovery
+            match_count: 15,
+            excluded_ids: excludedIds
+        });
+
+        if (rpcError) throw rpcError;
+
+        if (!matched || matched.length === 0) {
+            console.log("[AI] No similar movies found in Knowledge Base.");
+            return [];
         }
 
-        console.log(`[AI] Scoring ${candidateMovies.length} movies against user profile...`);
-
-        // Batch processing to avoid event loop blocking
-        const scoredMovies = await Promise.all(
-            candidateMovies.slice(0, 20).map(async (movie) => {
+        // 3. Fetch details from TMDB
+        const { fetchFromTMDB } = await import("./tmdb");
+        const recommendedMovies = await Promise.all(
+            matched.map(async (m: any) => {
                 try {
-                    // Use overview if available, otherwise title
-                    const text = movie.overview || movie.title;
-                    if (!text) return { ...movie, similarityScore: 0 };
-
-                    const movieEmbedding = await generateEmbedding(text);
-                    const score = cosineSimilarity(userVector, movieEmbedding);
-                    return { ...movie, similarityScore: score };
+                    return await fetchFromTMDB(`/movie/${m.movie_id}`);
                 } catch (e) {
-                    return { ...movie, similarityScore: 0 };
+                    return null;
                 }
             })
         );
 
-        const sorted = scoredMovies.sort((a, b) => b.similarityScore - a.similarityScore);
-        console.log(`[AI] Recommended top match: ${sorted[0]?.title} (Score: ${sorted[0]?.similarityScore})`);
-
-        return sorted;
-    } catch (e) {
-        console.error("[AI] Recommendation Error:", e);
-        return candidateMovies.slice(0, 10); // Ultimate fallback
+        return recommendedMovies.filter(Boolean);
+    } catch (e: any) {
+        console.error("[AI] PickedForYou Error:", e.message);
+        return [];
     }
 }
 

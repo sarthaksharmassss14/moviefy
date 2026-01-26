@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import Image from "next/image";
-import { Star, Clock, Calendar, Globe, Heart } from "lucide-react";
+import { Star, Clock, Calendar, Globe, Heart, MessageSquare } from "lucide-react";
 import ReviewForm from "@/components/ReviewForm";
 import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
@@ -139,7 +139,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                   imdbId={movie.imdb_id}
                   originalLanguage={movie.original_language}
                 />
-                <WatchlistButton movieId={movie.id} initialState={isInWatchlist} />
+                <WatchlistButton movieId={movie.id} initialState={isInWatchlist} userId={userId || ""} />
                 <AddToListButton movieId={movie.id} lists={userLists} userId={userId || ""} />
               </div>
             </div>
@@ -185,8 +185,13 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                     initialContent={reviews?.find(r => r.user_id === userId)?.content || ""}
                   />
                 ) : (
-                  <div className="login-prompt glass" style={{ padding: '20px', textAlign: 'center' }}>
-                    <p>Sign in to leave a review</p>
+                  <div className="login-prompt glass" style={{ padding: '40px', textAlign: 'center', borderRadius: '24px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <MessageSquare size={40} style={{ margin: '0 auto 16px', color: 'rgba(255,255,255,0.2)' }} />
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Share your thoughts</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>Sign in to rate this movie and join the conversation.</p>
+                    <Link href="/sign-in" className="action-btn" style={{ display: 'inline-flex', background: 'var(--primary-gradient)', color: 'white', border: 'none' }}>
+                      Sign In to Review
+                    </Link>
                   </div>
                 )}
 
