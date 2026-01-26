@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import Link from "next/link";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import Image from "next/image";
 import { Star, Clock, Calendar, Globe, Heart } from "lucide-react";
@@ -72,6 +73,8 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
       ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
       : "";
 
+    const director = credits.crew?.find((person: any) => person.job === "Director");
+
     return (
       <main className="movie-details-page">
         <Navbar />
@@ -93,7 +96,11 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
             </div>
             <div className="info-wrapper">
               <h1 className="movie-title-large">{movie.title}</h1>
-              <p className="tagline">{movie.tagline}</p>
+              {director && (
+                <p className="tagline" style={{ color: '#a1a1aa', fontWeight: '500', fontSize: '1.1rem' }}>
+                  Directed by <span style={{ color: 'white' }}>{director.name}</span>
+                </p>
+              )}
 
               <div className="meta-info">
                 <span className="meta-item"><Calendar size={18} /> {new Date(movie.release_date).getFullYear()}</span>
@@ -142,21 +149,24 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
               </section>
 
               <section className="cast">
-                <h2>Top Cast</h2>
+                <h2>Cast</h2>
                 <div className="cast-grid">
-                  {credits.cast.slice(0, 6).map((actor: any) => (
-                    <div key={actor.id} className="actor-card">
-                      <div className="actor-img-wrapper">
-                        <Image
-                          src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : "/no-actor.png"}
-                          alt={actor.name}
-                          width={100}
-                          height={100}
-                          className="actor-img"
-                        />
+                  {credits.cast.slice(0, 20).map((actor: any) => (
+                    <Link key={actor.id} href={`/person/${actor.id}`} className="actor-card-link">
+                      <div className="actor-card">
+                        <div className="actor-img-wrapper">
+                          <Image
+                            src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : "/no-actor.png"}
+                            alt={actor.name}
+                            width={100}
+                            height={100}
+                            className="actor-img"
+                          />
+                        </div>
+                        <span className="actor-name">{actor.name}</span>
+                        <span className="character-name">{actor.character}</span>
                       </div>
-                      <span>{actor.name}</span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </section>

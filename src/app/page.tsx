@@ -5,6 +5,8 @@ import { auth } from "@clerk/nextjs/server";
 import { getRecommendedMovies } from "@/lib/ai";
 import MoodSearch from "@/components/MoodSearch";
 
+import HeroCarousel from "@/components/HeroCarousel";
+
 async function getMovies() {
   const [trending, popular, topRated] = await Promise.all([
     fetchFromTMDB("/trending/movie/day"),
@@ -37,12 +39,7 @@ export default async function Home() {
     <main className="min-h-screen">
       <Navbar />
 
-      <section className="hero">
-        <div className="hero-content animate-fade-in">
-          <h1 className="hero-title">Discover Your Next <span className="gradient-text">Favorite Story</span></h1>
-          <p className="hero-subtitle">Personalized recommendations, lists, and reviews. All in one place.</p>
-        </div>
-      </section>
+      <HeroCarousel movies={trending.slice(0, 5)} />
 
       <div className="content-container">
         <MoodSearch />

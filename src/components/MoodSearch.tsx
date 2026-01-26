@@ -22,7 +22,7 @@ export default function MoodSearch() {
 
     setIsLoading(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
     try {
       const res = await fetch("/api/ai/mood", {
@@ -36,6 +36,7 @@ export default function MoodSearch() {
       const data = await res.json();
 
       if (!res.ok) {
+        setIsLoading(false); // Force stop
         setAlertConfig({
           isOpen: true,
           title: "AI Analysis Error",
@@ -47,6 +48,7 @@ export default function MoodSearch() {
 
       setResults(data.results || []);
       if (data.results?.length === 0) {
+        setIsLoading(false);
         setAlertConfig({
           isOpen: true,
           title: "No Matches",
@@ -56,11 +58,13 @@ export default function MoodSearch() {
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
+      setIsLoading(false); // Force stop
+
       if (err.name === 'AbortError') {
         setAlertConfig({
           isOpen: true,
-          title: "AI Model Loading",
-          message: "The AI model is waking up on our servers. This usually takes about 10-15 seconds. Please try clicking discover again in a moment!",
+          title: "Taking too long",
+          message: "The AI is taking a bit longer than usual. Please try again!",
           variant: "info"
         });
       } else {

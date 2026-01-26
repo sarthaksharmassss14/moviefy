@@ -317,9 +317,26 @@ button {
   margin-bottom: 48px;
 }
 
+.actor-card-link {
+  display: block;
+}
+
 .actor-card {
   text-align: center;
   font-size: 0.9rem;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.actor-card:hover {
+  transform: translateY(-5px) scale(1.05);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.actor-card:hover .actor-name {
+  color: #a855f7; /* Purple to match theme */
 }
 
 .actor-img-wrapper {
@@ -328,10 +345,29 @@ button {
   margin: 0 auto 10px;
   border-radius: 50%;
   overflow: hidden;
+  border: 2px solid transparent; /* Prepare for border transition */
+  transition: border-color 0.2s ease;
+}
+
+.actor-card:hover .actor-img-wrapper {
+  border-color: #a855f7;
 }
 
 .actor-img {
   object-fit: cover;
+}
+
+.actor-name {
+  display: block;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.character-name {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
 }
 
 .reviews-list {

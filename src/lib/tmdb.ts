@@ -56,7 +56,11 @@ export async function fetchFromTMDB(endpoint: string, params: Record<string, str
             let errorMessage = error.message;
             if (error.name === 'AbortError') errorMessage = "Request timed out (10s)";
 
-            console.error(`[TMDB Fetch Failure] Attempt ${attempts}:`, errorMessage);
+            if (attempts < maxRetries) {
+                console.warn(`[TMDB] Transient error (Attempt ${attempts}): ${errorMessage}. Retrying...`);
+            } else {
+                console.error(`[TMDB Fetch Failure] Final Attempt ${attempts}:`, errorMessage);
+            }
 
             if (attempts >= maxRetries) {
                 throw new Error(`TMDB connection failed after ${maxRetries} attempts. (Error: ${errorMessage})`);

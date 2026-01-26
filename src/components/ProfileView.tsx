@@ -588,7 +588,7 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
         }
 
         .create-list-btn {
-            background: var(--secondary-gradient);
+            background: var(--primary-gradient);
             color: white;
             padding: 10px 20px;
             border-radius: 12px;
@@ -596,13 +596,13 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
             transition: all 0.2s;
         }
 
         .create-list-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 8px 20px rgba(168, 85, 247, 0.6);
         }
 
         .lists-grid {

@@ -51,6 +51,7 @@ export default async function ListPage({ params }: { params: Promise<{ id: strin
     // We filter out any null results in case a movie ID is invalid or API fails
     const movies = (await Promise.all(
         (items || []).map(async (item) => {
+            if (!item.movie_id) return null;
             try {
                 const movie = await fetchFromTMDB(`/movie/${item.movie_id}`);
                 if (!movie || !movie.id) return null;
