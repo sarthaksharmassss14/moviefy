@@ -35,7 +35,7 @@ export default function MoodSearch() {
     setResults([]);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased to 45s
 
     try {
       const res = await fetch("/api/ai/mood", {

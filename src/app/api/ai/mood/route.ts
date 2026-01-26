@@ -25,21 +25,17 @@ export async function POST(req: NextRequest) {
         // --- RAG & Exclusion STEP ---
         let excludedMovieIds: number[] = [];
         try {
-            // 1. Get user's own reviews to exclude
-            if (userId) {
-                const { data: userReviews } = await supabase
-                    .from('reviews')
-                    .select('movie_id')
-                    .eq('user_id', userId)
-                    .limit(100);
+            // Parallelize Supabase fetch and AI Embedding generation
+            const [userReviewsRes, queryEmbedding] = await Promise.all([
+                userId ? supabase.from('reviews').select('movie_id').eq('user_id', userId).limit(100) : Promise.resolve({ data: [] }),
+                generateEmbedding(query)
+            ]);
 
-                if (userReviews) {
-                    excludedMovieIds = userReviews.map(r => r.movie_id);
-                }
+            if (userReviewsRes.data) {
+                excludedMovieIds = userReviewsRes.data.map((r: any) => r.movie_id);
             }
 
             // 2. Retrieve relevant reviews for context
-            const queryEmbedding = await generateEmbedding(query);
             const { data: matchedReviews } = await supabase.rpc('match_reviews', {
                 query_embedding: queryEmbedding,
                 match_threshold: 0.5,

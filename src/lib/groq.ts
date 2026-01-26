@@ -19,7 +19,7 @@ export async function getGroqRecommendations(mood: string, context?: string, wat
     Current Date: ${new Date().toDateString()}
     ${context ? `Here are some reviews from our database to help you understand the user's taste and similar movies:\n${context}` : ""}
     ${watchedMovies ? `CRITICAL: The user has already watched the following movies. DO NOT RECOMMEND THEM:\n${watchedMovies}` : ""}
-    Return a JSON object with a key "movies" containing 30 objects. Each object must have "title" and "year".
+    Return a JSON object with a key "movies" containing 20 objects. Each object must have "title" and "year".
     - User Request: "${mood}"
     ${forcedYear ? `- STRICTURE: The user is specifically asking for the year ${forcedYear}. ALL 30 movies MUST be released in ${forcedYear}. NO EXCEPTIONS.` : "- Requirement: Provide the EXACT title and the correct release year for each movie."}
     - PRIORITY: For general prompts (like "top movies of...", "best of...", "director/actor films"), ONLY suggest Hollywood and International English-language movies. 
@@ -32,7 +32,7 @@ export async function getGroqRecommendations(mood: string, context?: string, wat
         const completion = await groq.chat.completions.create({
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: `Provide 30 movies for: ${mood}` }
+                { role: "user", content: `Provide 20 movies for: ${mood}` }
             ],
             model: "llama-3.3-70b-versatile",
             temperature: forcedYear ? 0.1 : 0.4, // ultra-low temperature if a year is forced
