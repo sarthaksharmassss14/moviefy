@@ -95,10 +95,11 @@ export async function getRecommendedMovies(userId: string, candidateMovies: any[
 export async function getPickedForYou(userId: string) {
     console.log(`[AI] Generating proactive recommendations for user ${userId}...`);
     try {
-        // 1. Get user taste vector and rated movies
-        const [tasteRes, ratedRes] = await Promise.all([
+        // 1. Get user taste vector, rated movies, and watchlist
+        const [tasteRes, ratedRes, watchlistRes] = await Promise.all([
             supabase.from("user_tastes").select("taste_vector").eq("user_id", userId).single(),
-            supabase.from("reviews").select("movie_id").eq("user_id", userId)
+            supabase.from("reviews").select("movie_id").eq("user_id", userId),
+            supabase.from("watchlist").select("movie_id").eq("user_id", userId)
         ]);
 
         if (!tasteRes.data?.taste_vector) {
@@ -107,7 +108,11 @@ export async function getPickedForYou(userId: string) {
         }
 
         const userVector = tasteRes.data.taste_vector;
-        const excludedIds = (ratedRes.data || []).map(r => r.movie_id);
+        const ratedIds = (ratedRes.data || []).map(r => r.movie_id);
+        const watchlistIds = (watchlistRes.data || []).map(w => w.movie_id);
+
+        // Exclude both rated and watchlisted movies
+        const excludedIds = Array.from(new Set([...ratedIds, ...watchlistIds]));
 
         // 2. Vector search in database for similar movie embeddings
         const { data: matched, error: rpcError } = await supabase.rpc('match_movie_recommendations', {

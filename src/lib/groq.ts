@@ -64,3 +64,38 @@ export async function getGroqRecommendations(mood: string, context?: string, wat
         return [];
     }
 }
+
+export async function getMovieScores(title: string, year: string): Promise<{ imdb: string, rotten: string, letterboxd: string }> {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) return { imdb: "N/A", rotten: "N/A", letterboxd: "N/A" };
+
+    const systemPrompt = `You are a movie statistics expert. 
+    Provide the current IMDb score (out of 10), Rotten Tomatoes Critics score (as a percentage), and Letterboxd score (out of 5) for the movie provided.
+    Return ONLY JSON.
+    Example: { "imdb": "7.8", "rotten": "85%", "letterboxd": "3.9" }`;
+
+    try {
+        const completion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Movie: ${title} (${year})` }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.1,
+            response_format: { type: "json_object" },
+        });
+
+        const content = completion.choices[0]?.message?.content;
+        if (!content) throw new Error("No content");
+
+        const parsed = JSON.parse(content);
+        return {
+            imdb: parsed.imdb || "N/A",
+            rotten: parsed.rotten || "N/A",
+            letterboxd: parsed.letterboxd || "N/A"
+        };
+    } catch (e) {
+        console.error("[Groq] Scores Error:", e);
+        return { imdb: "N/A", rotten: "N/A", letterboxd: "N/A" };
+    }
+}

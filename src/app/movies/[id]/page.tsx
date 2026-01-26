@@ -2,98 +2,85 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import Image from "next/image";
-import { Star, Clock, Calendar, Globe, Heart, MessageSquare } from "lucide-react";
+import { Clock, Calendar, Globe } from "lucide-react";
 import ReviewForm from "@/components/ReviewForm";
 import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
-import { toggleWatchlist } from "@/app/actions";
 import MoviePlayer from "@/components/MoviePlayer";
 import AddToListButton from "@/components/AddToListButton";
 import WatchlistButton from "@/components/WatchlistButton";
+import LoginPrompt from "@/components/LoginPrompt";
+import { Suspense } from "react";
+import MovieScores from "@/components/MovieScores";
 
+// This function is now optimized to use a single TMDB call
 async function getMovieDetails(id: string) {
-  const [movie, credits, videos] = await Promise.all([
-    fetchFromTMDB(`/movie/${id}`),
-    fetchFromTMDB(`/movie/${id}/credits`),
-    fetchFromTMDB(`/movie/${id}/videos`),
-  ]);
+  const data = await fetchFromTMDB(`/movie/${id}`, {
+    append_to_response: "credits,videos"
+  });
 
-  const trailer = videos.results?.find(
+  if (!data) return { movie: null, credits: null, trailer: null };
+
+  const trailer = (data.videos?.results || []).find(
     (v: any) => v.type === "Trailer" && v.site === "YouTube"
   );
 
-  return { movie, credits, trailer };
+  return { movie: data, credits: data.credits, trailer };
 }
 
 export default async function MoviePage({ params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    console.log(`[MoviePage] Loading movie with ID: ${id}`);
+    const movieIdInt = parseInt(id);
 
-    const { movie, credits, trailer } = await getMovieDetails(id);
-    const { userId } = await auth();
+    // parallelize everything possible
+    const [{ movie, credits, trailer }, { userId }, { data: reviews }] = await Promise.all([
+      getMovieDetails(id),
+      auth(),
+      supabase.from("reviews").select("*").eq("movie_id", movieIdInt).order("created_at", { ascending: false })
+    ]);
 
-    console.log(`[MoviePage] Data fetched for ${movie.title}. User: ${userId}`);
-
-    const { data: reviews, error: reviewError } = await supabase
-      .from("reviews")
-      .select("*")
-      .eq("movie_id", parseInt(id))
-      .order("created_at", { ascending: false });
-
-    if (reviewError) console.error("[MoviePage] Supabase Review Error:", reviewError);
+    if (!movie) {
+      return (
+        <div className="page-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
+          <Navbar />
+          <h1 className="gradient-text">Movie not found</h1>
+          <p style={{ marginTop: '20px', color: '#a1a1aa' }}>We couldn't reach the cinema records. Please try again or refresh the page.</p>
+          <Link href="/" className="action-btn" style={{ display: 'inline-flex', marginTop: '30px' }}>Return Home</Link>
+        </div>
+      );
+    }
 
     let isInWatchlist = false;
     let userLists: any[] = [];
 
     if (userId) {
-      // Check Watchlist
-      const { data, error: watchlistError } = await supabase
-        .from("watchlist")
-        .select()
-        .eq("user_id", userId)
-        .eq("movie_id", parseInt(id))
-        .single();
+      // Parallelize watchlist check and lists fetch
+      const [watchlistCheck, listsRes] = await Promise.all([
+        supabase.from("watchlist").select().eq("user_id", userId).eq("movie_id", movieIdInt).maybeSingle(),
+        supabase.from('lists').select('id, name').eq('user_id', userId).order('created_at', { ascending: false })
+      ]);
 
-      if (watchlistError && watchlistError.code !== 'PGRST116') {
-        console.error("[MoviePage] Supabase Watchlist Error:", watchlistError);
+      isInWatchlist = !!watchlistCheck.data;
+
+      // Handle Rated -> Remove from Watchlist logic
+      const userRatingRaw = reviews?.find((r: any) => r.user_id === userId)?.rating;
+      if (userRatingRaw) {
+        isInWatchlist = false;
+        if (watchlistCheck.data) {
+          supabase.from("watchlist").delete().eq("user_id", userId).eq("movie_id", movieIdInt).then();
+        }
       }
-      isInWatchlist = !!data;
 
-      // Fetch User Lists for AddToList dropdown with their first poster
-      const { data: listsData } = await supabase
-        .from('lists')
-        .select('id, name')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (listsData) {
-        userLists = await Promise.all(listsData.map(async (list) => {
-          const { data: items } = await supabase
-            .from('list_items')
-            .select('movie_id')
-            .eq('list_id', list.id)
-            .order('added_at', { ascending: false })
-            .limit(1);
-
-          if (items && items.length > 0) {
-            try {
-              const movieDetail = await fetchFromTMDB(`/movie/${items[0].movie_id}`);
-              return { ...list, poster_path: movieDetail.poster_path };
-            } catch (e) {
-              return { ...list, poster_path: null };
-            }
-          }
-          return { ...list, poster_path: null };
-        }));
+      if (listsRes.data) {
+        userLists = listsRes.data.map(l => ({ ...l, poster_path: null })); // Rapid fallback, list posters can load later or be omitted for speed
       }
     }
 
-    const backgroundUrl = movie.backdrop_path
-      ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
-      : "";
-
+    const backgroundUrl = movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : "";
     const director = credits.crew?.find((person: any) => person.job === "Director");
+    const userReview = reviews?.find(r => r.user_id === userId);
+    const userRating = userReview?.rating || null;
 
     return (
       <main className="movie-details-page">
@@ -112,6 +99,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                 width={350}
                 height={525}
                 className="details-poster"
+                priority
               />
             </div>
             <div className="info-wrapper">
@@ -134,24 +122,15 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                 ))}
               </div>
 
-              <div className="scores-grid">
-                <div className="score-card glass">
-                  <span className="score-label">TMDB</span>
-                  <span className="score-value">{movie.vote_average.toFixed(1)}</span>
+              <Suspense fallback={
+                <div className="scores-grid">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="score-card glass loading-skeleton" style={{ height: '60px', opacity: 0.3 }}></div>
+                  ))}
                 </div>
-                <div className="score-card glass">
-                  <span className="score-label">IMDb</span>
-                  <span className="score-value">{(movie.vote_average + 0.2).toFixed(1)}</span>
-                </div>
-                <div className="score-card glass">
-                  <span className="score-label">Rotten</span>
-                  <span className="score-value">{Math.round(movie.vote_average * 10)}%</span>
-                </div>
-                <div className="score-card glass">
-                  <span className="score-label">Letterboxd</span>
-                  <span className="score-value">{(movie.vote_average / 2).toFixed(1)}</span>
-                </div>
-              </div>
+              }>
+                <MovieScores imdbId={movie.imdb_id} tmdbRating={movie.vote_average} />
+              </Suspense>
 
               <div className="actions" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <MoviePlayer
@@ -159,7 +138,12 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                   imdbId={movie.imdb_id}
                   originalLanguage={movie.original_language}
                 />
-                <WatchlistButton movieId={movie.id} initialState={isInWatchlist} userId={userId || ""} />
+                <WatchlistButton
+                  movieId={movie.id}
+                  initialState={isInWatchlist}
+                  userId={userId || ""}
+                  userRating={userRating}
+                />
                 <AddToListButton movieId={movie.id} lists={userLists} userId={userId || ""} />
               </div>
             </div>
@@ -175,12 +159,12 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
               <section className="cast">
                 <h2>Cast</h2>
                 <div className="cast-grid">
-                  {credits.cast.slice(0, 20).map((actor: any) => (
+                  {credits.cast.filter((actor: any) => actor.profile_path).slice(0, 20).map((actor: any) => (
                     <Link key={actor.id} href={`/person/${actor.id}`} className="actor-card-link">
                       <div className="actor-card">
                         <div className="actor-img-wrapper">
                           <Image
-                            src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : "/no-actor.png"}
+                            src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`}
                             alt={actor.name}
                             width={100}
                             height={100}
@@ -201,18 +185,11 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                   <ReviewForm
                     movieId={movie.id}
                     movieDescription={movie.overview}
-                    initialRating={reviews?.find(r => r.user_id === userId)?.rating || 0}
-                    initialContent={reviews?.find(r => r.user_id === userId)?.content || ""}
+                    initialRating={userRating || 0}
+                    initialContent={userReview?.content || ""}
                   />
                 ) : (
-                  <div className="login-prompt glass" style={{ padding: '40px', textAlign: 'center', borderRadius: '24px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <MessageSquare size={40} style={{ margin: '0 auto 16px', color: 'rgba(255,255,255,0.2)' }} />
-                    <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Share your thoughts</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>Sign in to rate this movie and join the conversation.</p>
-                    <Link href="/sign-in" className="action-btn" style={{ display: 'inline-flex', background: 'var(--primary-gradient)', color: 'white', border: 'none' }}>
-                      Sign In to Review
-                    </Link>
-                  </div>
+                  <LoginPrompt />
                 )}
 
                 <div className="reviews-list">
@@ -225,8 +202,6 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                     </div>
                   ))}
                 </div>
-
-
               </section>
             </div>
           </div>
@@ -238,7 +213,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
     return (
       <div className="page-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
         <h1 className="gradient-text">Oops! Connection Issue</h1>
-        <p style={{ marginTop: '20px' }}>{error.message || "Failed to load movie details. Please check your internet or try refreshing."}</p>
+        <p style={{ marginTop: '20px' }}>{error.message || "Failed to load movie details."}</p>
       </div>
     );
   }

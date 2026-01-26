@@ -40,8 +40,8 @@ export default function ConfirmModal({
         switch (variant) {
             case "danger": return "bg-red-500/10 text-red-500 border-red-500/20";
             case "success": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-            case "info": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-            default: return "bg-indigo-500/10 text-indigo-500 border-indigo-500/20";
+            case "info": return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
+            default: return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
         }
     };
 
@@ -49,8 +49,8 @@ export default function ConfirmModal({
         switch (variant) {
             case "danger": return "bg-red-500 hover:bg-red-600 shadow-red-500/20";
             case "success": return "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20";
-            case "info": return "bg-blue-500 hover:bg-blue-600 shadow-blue-500/20";
-            default: return "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/20";
+            case "info": return "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-indigo-500/20";
+            default: return "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-indigo-500/20";
         }
     };
 

@@ -10,17 +10,24 @@ interface WatchlistButtonProps {
     movieId: number;
     initialState: boolean;
     userId: string;
+    userRating: number | null;
 }
 
-export default function WatchlistButton({ movieId, initialState, userId }: WatchlistButtonProps) {
+export default function WatchlistButton({ movieId, initialState, userId, userRating }: WatchlistButtonProps) {
     const [isInWatchlist, setIsInWatchlist] = useState(initialState);
     const [isPending, startTransition] = useTransition();
     const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showRatedModal, setShowRatedModal] = useState(false);
     const router = useRouter();
 
     const handleToggle = async () => {
         if (!userId) {
             setShowLoginModal(true);
+            return;
+        }
+
+        if (userRating !== null) {
+            setShowRatedModal(true);
             return;
         }
 
@@ -65,6 +72,16 @@ export default function WatchlistButton({ movieId, initialState, userId }: Watch
                 message="You need to be logged in to manage your watchlist."
                 confirmLabel="Login Now"
                 variant="info"
+            />
+
+            <ConfirmModal
+                isOpen={showRatedModal}
+                onClose={() => setShowRatedModal(false)}
+                title="Already Rated"
+                message={`You have already rated this movie with ${userRating} stars. Rated movies are automatically removed from your watchlist.`}
+                confirmLabel="Got it"
+                variant="info"
+                mode="alert"
             />
         </>
     );

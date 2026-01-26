@@ -24,52 +24,58 @@ export async function fetchFromTMDB(endpoint: string, params: Record<string, str
 
     while (attempts < maxRetries) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
         try {
             const response = await fetch(url, {
                 signal: controller.signal,
-                next: { revalidate: 3600 * 24 } // Cache for 24 hours
+                next: { revalidate: 3600 * 12 } // Cache for 12 hours
             });
 
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                const errorBody = await response.text();
+                const errorText = await response.text();
+                console.warn(`[TMDB] API Warning ${response.status}: ${errorText.slice(0, 100)}`);
 
-                // If 404, don't retry, just fail fast
-                if (response.status === 404) {
-                    throw new Error(`TMDB 404: Not Found at ${endpoint}`);
+                if (response.status === 404) return null;
+                if (response.status === 429) {
+                    // Rate limit - wait and retry
+                    await new Promise(r => setTimeout(r, 2000));
+                    attempts++;
+                    continue;
                 }
 
-                throw new Error(`TMDB Server returned ${response.status}: ${errorBody}`);
+                throw new Error(`Status ${response.status}`);
             }
 
             return await response.json();
         } catch (error: any) {
             clearTimeout(timeoutId);
-
-            // Don't retry on 404 or specific errors
-            if (error.message.includes("404")) {
-                throw error;
-            }
-
             attempts++;
-            let errorMessage = error.message;
-            if (error.name === 'AbortError') errorMessage = "Request timed out (20s)";
+
+            const isTimeout = error.name === 'AbortError';
+            const isNetworkError = error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED');
 
             if (attempts < maxRetries) {
-                console.warn(`[TMDB] Transient error (Attempt ${attempts}): ${errorMessage}. Retrying...`);
+                const delay = 500 * attempts;
+                console.warn(`[TMDB] Retry ${attempts}/${maxRetries} (${isTimeout ? 'Timeout' : 'Network'})...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             } else {
-                console.error(`[TMDB Fetch Failure] Final Attempt ${attempts}:`, error.message);
-            }
+                // FINAL ATTEMPT FAILED
+                console.error(`[TMDB] SILENT FAIL: Connection issue after ${maxRetries} attempts. Returning fallback.`);
 
-            if (attempts >= maxRetries) {
-                throw new Error(`TMDB failed after ${maxRetries} attempts: ${errorMessage}`);
+                // Return fallback instead of throwing
+                // If it's a search endpoint, return empty results
+                if (endpoint.includes('/search/') || endpoint.includes('/list/') || endpoint.includes('/popular')) {
+                    return { results: [], page: 1, total_results: 0, total_pages: 0 };
+                }
+                // If it's a detail endpoint, return null or empty object
+                return null;
             }
-            await new Promise(resolve => setTimeout(resolve, 500 * attempts));
         }
     }
+    return null;
 }
 
 export const MOVIE_GENRES: Record<number, string> = {
@@ -93,3 +99,19 @@ export const MOVIE_GENRES: Record<number, string> = {
     10752: "War",
     37: "Western",
 };
+
+export async function fetchFromOMDb(imdbId: string) {
+    if (!imdbId) return null;
+
+    // Using a reliable public sandbox key 'trilogy' for real-world movie data
+    const url = `https://www.omdbapi.com/?i=${imdbId}&apikey=trilogy`;
+
+    try {
+        const response = await fetch(url, { next: { revalidate: 3600 * 24 } });
+        if (!response.ok) return null;
+        return await response.json();
+    } catch (e) {
+        console.warn("[OMDb] Fetch failed:", e);
+        return null;
+    }
+}

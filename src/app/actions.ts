@@ -9,9 +9,13 @@ export async function submitReview(formData: FormData) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    const movieId = parseInt(formData.get("movieId") as string);
+    const rawMovieId = formData.get("movieId");
+    if (!rawMovieId) throw new Error("Movie ID is missing");
+    const movieId = parseInt(rawMovieId as string);
+    if (isNaN(movieId)) throw new Error("Invalid Movie ID");
+
     const ratingStr = formData.get("rating") as string;
-    const content = formData.get("content") as string;
+    const content = (formData.get("content") as string) || "";
     const movieDescription = formData.get("movieDescription") as string;
 
     const rating = ratingStr ? parseInt(ratingStr) : null;
@@ -19,9 +23,14 @@ export async function submitReview(formData: FormData) {
 
     if (movieDescription) {
         try {
-            movieEmbedding = await generateEmbedding(movieDescription);
+            const embed = await generateEmbedding(movieDescription);
+            if (Array.isArray(embed) && Array.isArray(embed[0])) {
+                movieEmbedding = embed[0] as number[];
+            } else {
+                movieEmbedding = embed as number[];
+            }
         } catch (e) {
-            console.warn("[submitReview] Embedding failed:", e);
+            console.warn("[submitReview] AI Embedding failed (silent fallback):", e);
         }
     }
 
@@ -33,7 +42,7 @@ export async function submitReview(formData: FormData) {
         user_id: userId,
         movie_id: movieId,
         ...(rating !== null && { rating }),
-        ...(content.trim() && { content }),
+        ...(content.trim() && { content: content.trim() }),
         ...(movieEmbedding && { embedding: movieEmbedding }),
         created_at: new Date().toISOString(),
     }, {
@@ -46,23 +55,38 @@ export async function submitReview(formData: FormData) {
     }
 
     // Update user taste profile for RAG if high rating is given
+    // FIRE AND FORGET: Do not 'await' this so the user gets instant feedback
     if (rating && rating >= 4 && movieDescription) {
-        await updateUserTaste(userId, movieDescription);
+        updateUserTaste(userId, movieDescription).catch(e =>
+            console.warn("[submitReview] Background taste update failed:", e)
+        );
+    }
+
+    // If user provided a rating, remove from watchlist automatically
+    if (rating !== null) {
+        await supabase.from("watchlist").delete().eq("user_id", userId).eq("movie_id", movieId);
     }
 
     revalidatePath(`/movies/${movieId}`);
+    revalidatePath(`/profile`);
 }
 
 export async function toggleWatchlist(movieId: number) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    const { data: existing } = await supabase
+    // Use maybeSingle to prevent PGRST116 errors when record is missing
+    const { data: existing, error } = await supabase
         .from("watchlist")
-        .select()
+        .select("user_id")
         .eq("user_id", userId)
         .eq("movie_id", movieId)
-        .single();
+        .maybeSingle();
+
+    if (error) {
+        console.error("[toggleWatchlist] DB Error:", error.message);
+        throw new Error("Failed to check watchlist status");
+    }
 
     if (existing) {
         await supabase.from("watchlist").delete().eq("user_id", userId).eq("movie_id", movieId);
@@ -71,4 +95,5 @@ export async function toggleWatchlist(movieId: number) {
     }
 
     revalidatePath(`/movies/${movieId}`);
+    revalidatePath(`/profile`);
 }

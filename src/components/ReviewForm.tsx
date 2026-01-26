@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import { submitReview } from "@/app/actions";
 import ConfirmModal from "./ConfirmModal";
@@ -20,6 +21,7 @@ export default function ReviewForm({
   const [hover, setHover] = useState(0);
   const [content, setContent] = useState(initialContent);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   // Sync state if props change (e.g. after revalidation)
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function ReviewForm({
 
     try {
       await submitReview(formData);
+      router.refresh(); // Trigger server data refresh immediately
       setModalConfig({
         isOpen: true,
         title: "Rating Saved!",
@@ -82,6 +85,7 @@ export default function ReviewForm({
 
     try {
       await submitReview(formData);
+      router.refresh(); // Sync Watchlist button and other UI
       setModalConfig({
         isOpen: true,
         title: "Review Saved!",

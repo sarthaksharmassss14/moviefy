@@ -2,11 +2,10 @@ import Navbar from "@/components/Navbar";
 import MovieCard from "@/components/MovieCard";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import { auth } from "@clerk/nextjs/server";
-import { getRecommendedMovies, getPickedForYou } from "@/lib/ai";
 import MoodSearch from "@/components/MoodSearch";
-import PickedForYouSection from "@/components/PickedForYouSection";
-
 import HeroCarousel from "@/components/HeroCarousel";
+import { Suspense } from "react";
+import AIPickedSection from "@/components/AIPickedSection";
 
 async function getMovies() {
   const [trending, popular, topRated] = await Promise.all([
@@ -20,32 +19,21 @@ async function getMovies() {
     (movies || []).filter(movie => !indianLanguages.includes(movie.original_language));
 
   return {
-    trending: filterIndian(trending.results),
-    popular: filterIndian(popular.results),
-    topRated: filterIndian(topRated.results),
+    trending: filterIndian(trending?.results || []),
+    popular: filterIndian(popular?.results || []),
+    topRated: filterIndian(topRated?.results || []),
   };
 }
 
 export default async function Home() {
-  const { userId } = await auth();
-  const { trending, popular, topRated } = await getMovies();
+  // Fire off auth and movie fetches in parallel
+  const authPromise = auth();
+  const moviesPromise = getMovies();
 
-  let recommendations = [];
-  if (userId) {
-    const [proactive, scored] = await Promise.all([
-      getPickedForYou(userId),
-      getRecommendedMovies(userId, [...trending, ...popular, ...topRated])
-    ]);
-
-    // Combine and de-duplicate
-    const combined = [...proactive, ...scored];
-    const uniqueIds = new Set();
-    recommendations = combined.filter(m => {
-      if (uniqueIds.has(m.id)) return false;
-      uniqueIds.add(m.id);
-      return true;
-    }).slice(0, 6);
-  }
+  const [{ userId }, { trending, popular, topRated }] = await Promise.all([
+    authPromise,
+    moviesPromise
+  ]);
 
   return (
     <main className="min-h-screen">
@@ -56,7 +44,14 @@ export default async function Home() {
       <div className="content-container">
         <MoodSearch />
 
-        <PickedForYouSection movies={recommendations} />
+        {/* Use Suspense for the slow AI part so the rest of the page loads instantly */}
+        <Suspense fallback={
+          <div className="picked-for-you-section" style={{ padding: '60px 0', textAlign: 'center' }}>
+            <p style={{ color: 'rgba(255,255,255,0.4)' }}>Generating your personalized picks...</p>
+          </div>
+        }>
+          <AIPickedSection userId={userId} trendingMovies={[...trending, ...popular, ...topRated]} />
+        </Suspense>
 
         <section className="movie-section">
           <h2 className="section-title">Trending Today</h2>

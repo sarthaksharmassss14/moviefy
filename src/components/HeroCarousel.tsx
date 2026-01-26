@@ -26,7 +26,7 @@ export default function HeroCarousel({ movies }: { movies: any[] }) {
         <div
           key={movie.id}
           className={`carousel-slide ${index === currentIndex ? "active" : ""}`}
-          style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})` }}
+          style={{ backgroundImage: `url(https://image.tmdb.org/t/p/w1280${movie.backdrop_path})` }}
         >
           <div className="slide-overlay"></div>
           <div className="slide-content">

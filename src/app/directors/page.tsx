@@ -35,7 +35,7 @@ async function getDirectors() {
     );
 
     return results
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled" && r.value !== null)
         .map(r => r.value);
 }
 

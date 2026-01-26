@@ -88,7 +88,8 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
 
                 {/* Tab Switcher */}
                 <div className="tab-switcher">
-                    <Link href="/" className="tab-btn link-home">
+                    <Link href="/" className="tab-btn">
+                        <Home size={18} />
                         Home
                     </Link>
                     <div className="divider"></div>
@@ -401,7 +402,7 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
         .profile-container {
             min-height: 100vh;
             padding: 60px 20px 80px;
-            max-width: 1280px;
+            max-width: 1500px;
             margin: 0 auto;
         }
 
@@ -409,16 +410,17 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 24px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 20px;
+            padding: 32px 48px;
+            margin-bottom: 32px;
+            flex-wrap: nowrap;
+            gap: 40px;
         }
 
         .user-section {
             display: flex;
             align-items: center;
             gap: 24px;
+            flex: 1;
         }
 
         .profile-avatar {
@@ -442,11 +444,12 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
 
         .tab-switcher {
             display: flex;
-            gap: 12px;
-            background: rgba(255,255,255,0.05);
-            padding: 6px;
-            border-radius: 12px;
+            gap: 16px;
+            background: rgba(255,255,255,0.03);
+            padding: 8px;
+            border-radius: 16px;
             align-items: center;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .divider {
@@ -470,9 +473,10 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
             gap: 8px;
         }
 
-        .tab-btn:hover, .tab-btn.link-home:hover {
+        .tab-btn:hover {
             color: white;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px) scale(1.02);
         }
 
         .tab-btn.active {
@@ -527,12 +531,21 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
         }
 
         .review-item {
-            padding: 16px;
-            transition: transform 0.2s;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
 
         .review-item:hover {
-            transform: translateX(4px);
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
         }
 
         .review-link-wrapper {
@@ -630,18 +643,19 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
             display: flex;
             flex-direction: column;
             gap: 16px;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(12px) !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
             border-radius: 24px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .list-card-premium:hover {
-            transform: translateY(-10px) scale(1.02);
-            background: rgba(255, 255, 255, 0.07);
-            border-color: rgba(129, 140, 248, 0.4);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.1);
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: rgba(99, 102, 241, 0.6) !important;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
         }
 
         .poster-stack {
@@ -649,19 +663,19 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
             height: 160px;
             display: flex;
             align-items: center;
-            background: #0d0d0f;
+            background: rgba(255, 255, 255, 0.02);
             border-radius: 12px;
             padding: 0 10px;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             transition: all 0.3s ease;
         }
 
         .list-card-premium:hover .poster-stack {
-            border-color: rgba(129, 140, 248, 0.4);
-            background: #121216;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.1);
+            border-color: rgba(129, 140, 248, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.2);
         }
 
         .stack-item {
