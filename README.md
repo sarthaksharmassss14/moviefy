@@ -2,7 +2,6 @@
 
 **Moviefy** is a state-of-the-art AI-powered movie discovery and exploration platform. It goes beyond simple search by using Large Language Models and Vector Databases to understand your mood, learn your taste, and recommend your next favorite film in seconds.
 
-![Moviefy Hero](https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=1200)
 
 ## 🚀 Experience the Future of Discovery
 
