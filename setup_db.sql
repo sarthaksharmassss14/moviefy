@@ -57,6 +57,7 @@ create table list_items (
 create table user_tastes (
   user_id text primary key,
   taste_vector vector(384),
+  rating_count integer default 0,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -107,6 +108,33 @@ begin
   from reviews
   where 1 - (reviews.embedding <=> query_embedding) > match_threshold
   order by similarity desc
+  limit match_count;
+end;
+$$;
+
+-- Create a function for Proactive RAG (matching based on user taste vector)
+create or replace function match_movie_recommendations (
+  query_embedding vector(384),
+  match_threshold float,
+  match_count int,
+  excluded_ids integer[]
+)
+returns table (
+  movie_id integer,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    distinct on (reviews.movie_id) reviews.movie_id,
+    1 - (reviews.embedding <=> query_embedding) as similarity
+  from reviews
+  where reviews.embedding is not null 
+    and 1 - (reviews.embedding <=> query_embedding) > match_threshold
+    and not (reviews.movie_id = any(excluded_ids))
+  order by reviews.movie_id, similarity desc
   limit match_count;
 end;
 $$;
