@@ -14,117 +14,83 @@ export async function POST(req: NextRequest) {
 
         console.log(`[AI Mood] Starting discovery for: "${query}". User: ${userId || 'Guest'}. Exclude: ${excludeTitles.length} items.`);
 
+        // --- HYPER-FAST RAG & DISCOVERY STEP ---
         let context = "";
         let watchedMoviesContext = "";
-
-        // Combine manual exclusions with RAG context
-        if (excludeTitles.length > 0) {
-            watchedMoviesContext = `DONT RECOMMEND: ${excludeTitles.slice(-10).join(", ")}`;
-        }
-
-        // --- RAG & Exclusion STEP ---
         let excludedMovieIds: number[] = [];
-        try {
-            // Parallelize Supabase fetch and AI Embedding generation
-            const [userReviewsRes, queryEmbedding] = await Promise.all([
-                userId ? supabase.from('reviews').select('movie_id').eq('user_id', userId).limit(100) : Promise.resolve({ data: [] }),
-                generateEmbedding(query)
-            ]);
 
-            if (userReviewsRes.data) {
-                excludedMovieIds = userReviewsRes.data.map((r: any) => r.movie_id);
-            }
+        // 1. Parallel Context Gathering with a strict Timeout (Smart Skip)
+        console.log("[AI Mood] Gathering context and results in parallel...");
 
-            // 2. Retrieve relevant reviews for context
-            const { data: matchedReviews } = await supabase.rpc('match_reviews', {
-                query_embedding: queryEmbedding,
-                match_threshold: 0.5,
-                match_count: 8 // Get more for better filtering
-            });
+        const contextPromise = (async () => {
+            try {
+                const [userReviewsRes, queryEmbedding] = await Promise.all([
+                    userId ? supabase.from('reviews').select('movie_id').eq('user_id', userId).limit(100) : Promise.resolve({ data: [] }),
+                    generateEmbedding(query)
+                ]);
 
-            if (matchedReviews && matchedReviews.length > 0) {
-                console.log(`[AI Mood] Found ${matchedReviews.length} relevant reviews for context.`);
-                context = matchedReviews.map((r: any) => `Review: "${r.content}"`).join("\n");
-                // Inform Groq about what was watched if we can link it
-                if (userId) {
-                    const watched = matchedReviews.filter((r: any) => r.user_id === userId);
-                    if (watched.length > 0) {
-                        watchedMoviesContext = watched.map((r: any) => r.content.slice(0, 100)).join(", ");
-                    }
+                if (userReviewsRes.data) {
+                    excludedMovieIds = userReviewsRes.data.map((r: any) => r.movie_id);
                 }
-            } else {
-                console.log("[AI Mood] No relevant reviews found.");
-            }
-        } catch (ragError) {
-            console.warn("[AI Mood] RAG/Exclusion failed:", ragError);
-        }
 
-        // 1. Get Recommendations from Groq
+                const { data: matchedReviews } = await supabase.rpc('match_reviews', {
+                    query_embedding: queryEmbedding,
+                    match_threshold: 0.5,
+                    match_count: 5
+                });
+
+                if (matchedReviews && matchedReviews.length > 0) {
+                    context = matchedReviews.map((r: any) => `Review: "${r.content}"`).join("\n");
+                }
+            } catch (e) {
+                console.warn("[AI Mood] Context retrieval failed or timed out.");
+            }
+        })();
+
+        // Race the context gathering against a 2.5s timeout
+        await Promise.race([
+            contextPromise,
+            new Promise(resolve => setTimeout(resolve, 2500))
+        ]);
+
+        // 2. Get Recommendations from Groq (Now we have context, or we don't, but we move FAST)
         let recommendedObjects: any[] = [];
         const apiKey = process.env.GROQ_API_KEY;
 
         if (apiKey) {
             recommendedObjects = await getGroqRecommendations(query, context, watchedMoviesContext);
-            console.log(`[AI Mood] Groq suggested:`, recommendedObjects.map(m => `${m.title} (${m.year})`));
         }
 
-        // 2. Fetch Details and Filter 
-        const movies: any[] = [];
+        // 3. Hyper-Parallel Detail Fetching (Process all candidates at once)
+        console.log(`[AI Mood] Fetching details for ${recommendedObjects.length} candidates...`);
 
-        // Process candidates in chunks for speed while respecting 5 movie cap
-        const processCandidate = async (rec: any) => {
-            try {
-                const isRepeat = excludeTitles.some((t: string) => t.toLowerCase() === rec.title.toLowerCase());
-                if (isRepeat) return null;
+        const movieResults = await Promise.all(
+            recommendedObjects.map(async (rec: any) => {
+                try {
+                    const isRepeat = excludeTitles.some((t: string) => t.toLowerCase() === rec.title.toLowerCase());
+                    if (isRepeat) return null;
 
-                const searchRes = await fetchFromTMDB("/search/movie", {
-                    query: rec.title,
-                    primary_release_year: rec.year?.toString() || "",
-                });
+                    const searchRes = await fetchFromTMDB("/search/movie", {
+                        query: rec.title,
+                        primary_release_year: rec.year?.toString() || "",
+                    });
 
-                const bestMatch = searchRes.results?.find((m: any) =>
-                    m.release_date?.startsWith(rec.year?.toString())
-                );
+                    const bestMatch = searchRes.results?.[0]; // Take top match immediately for speed
+                    if (!bestMatch) return null;
 
-                if (bestMatch) {
-                    // HOLLYWOOD PRIORITY: Filter out non-English movies for general queries
-                    const isGeneralQuery = !/(hindi|indian|bollywood|french|korean|anime|japanese|spanish|telugu|tamil|malayalam|kannada|italian|chinese|german|russian|portuguese|arabic|persian|greek|turkish|danish|dutch|swedish|asian)/i.test(query);
-                    if (isGeneralQuery && bestMatch.original_language !== 'en') {
-                        console.log(`[AI Mood] Filtering out non-English movie: ${bestMatch.title} (${bestMatch.original_language})`);
-                        return null;
-                    }
-
-                    const queryYearMatch = query.match(/\b(19|20)\d{2}\b/);
-                    if (queryYearMatch && !bestMatch.release_date.startsWith(queryYearMatch[0])) return null;
+                    // Exclude watched
                     if (excludedMovieIds.includes(bestMatch.id)) return null;
 
-                    const details = await fetchFromTMDB(`/movie/${bestMatch.id}`);
-
-                    // Relaxed runtime for future films (often 0 or empty in TMDB for future releases)
-                    const isFutureOrCurrent = new Date(details.release_date).getFullYear() >= 2025;
-                    if (!isFutureOrCurrent && details.runtime && details.runtime < 60) return null;
-
-                    return details;
+                    // Quick detail fetch for poster and runtime
+                    return await fetchFromTMDB(`/movie/${bestMatch.id}`);
+                } catch (e) {
+                    return null;
                 }
-            } catch (e) {
-                return null;
-            }
-            return null;
-        };
+            })
+        );
 
-        // Chunked parallel execution
-        const chunkSize = 6;
-        for (let i = 0; i < recommendedObjects.length; i += chunkSize) {
-            const chunk = recommendedObjects.slice(i, i + chunkSize);
-            const batchResults = await Promise.all(chunk.map(processCandidate));
-
-            for (const movie of batchResults) {
-                if (movie && movies.length < 5) {
-                    movies.push(movie);
-                }
-            }
-            if (movies.length >= 5) break;
-        }
+        // Filter valid movies and clamp to 6 for the UI grid
+        const movies = movieResults.filter(Boolean).slice(0, 6);
 
         // Fallback if we didn't get enough clean results from AI (less than 5)
         if (movies.length < 5) {
