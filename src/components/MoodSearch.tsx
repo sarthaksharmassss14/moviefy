@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 import MovieCard from "./MovieCard";
 import ConfirmModal from "./ConfirmModal";
 
 export default function MoodSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const [pastRecommendations, setPastRecommendations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastQuery, setLastQuery] = useState("");
   const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean, title: string, message: string, variant: "danger" | "success" | "info" }>({
     isOpen: false,
     title: "",
@@ -20,15 +23,28 @@ export default function MoodSearch() {
     e.preventDefault();
     if (!query.trim()) return;
 
+    // Refresh everything if query changed
+    let currentHistory = pastRecommendations;
+    if (query.trim().toLowerCase() !== lastQuery.toLowerCase()) {
+      currentHistory = [];
+      setPastRecommendations([]);
+    }
+    setLastQuery(query.trim());
+
     setIsLoading(true);
+    setResults([]);
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       const res = await fetch("/api/ai/mood", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({
+          query,
+          excludeTitles: currentHistory
+        }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -36,19 +52,19 @@ export default function MoodSearch() {
       const data = await res.json();
 
       if (!res.ok) {
-        setIsLoading(false); // Force stop
-        setAlertConfig({
-          isOpen: true,
-          title: "AI Analysis Error",
-          message: data.error || "There was an issue processing your request on the AI server.",
-          variant: "danger"
-        });
-        return;
+        throw new Error(data.error || "Server error");
       }
 
-      setResults(data.results || []);
-      if (data.results?.length === 0) {
-        setIsLoading(false);
+      const newResults = data.results || [];
+      setResults(newResults);
+
+      // Update history for next skip
+      if (newResults.length > 0) {
+        const newTitles = newResults.map((m: any) => m.title);
+        setPastRecommendations(prev => [...prev, ...newTitles]);
+      }
+
+      if (!data.results || data.results.length === 0) {
         setAlertConfig({
           isOpen: true,
           title: "No Matches",
@@ -58,7 +74,7 @@ export default function MoodSearch() {
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
-      setIsLoading(false); // Force stop
+      console.error("[MoodSearch] Error:", err);
 
       if (err.name === 'AbortError') {
         setAlertConfig({
@@ -68,11 +84,10 @@ export default function MoodSearch() {
           variant: "info"
         });
       } else {
-        console.error(err);
         setAlertConfig({
           isOpen: true,
-          title: "Temporary Hiccup",
-          message: "The server is a bit busy right now. Please refresh the page and try your search again.",
+          title: "Search Issue",
+          message: err.message || "Something went wrong. Please try again.",
           variant: "danger"
         });
       }
@@ -104,14 +119,70 @@ export default function MoodSearch() {
         </form>
       </div>
 
-      {results.length > 0 && (
-        <div className="mood-results animate-fade-in">
+      {isLoading && (
+        <div className="mood-loading-container">
+          <motion.div
+            className="loader-content"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="purple-pulsar">
+              <motion.div
+                className="pulsar-inner"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <Sparkles className="loader-sparkle" size={32} />
+            </div>
+            <motion.p
+              className="loader-text"
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              AI is analyzing your vibe...
+            </motion.p>
+          </motion.div>
+        </div>
+      )}
+
+      {results.length > 0 && !isLoading && (
+        <div className="mood-results">
           <h3 className="results-title">AI Picks for your mood:</h3>
-          <div className="movie-grid">
+          <motion.div
+            key={JSON.stringify(results.map(r => r.id))} // Dynamic key to force re-animation
+            className="movie-grid"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1
+                }
+              }
+            }}
+          >
             {results.slice(0, 5).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
+              <motion.div
+                key={movie.id}
+                variants={{
+                  hidden: { opacity: 0, y: 30, filter: "blur(5px)" },
+                  show: {
+                    opacity: 1,
+                    y: 0,
+                    filter: "blur(0px)",
+                    transition: { type: "spring", stiffness: 80, damping: 12 }
+                  }
+                }}
+              >
+                <MovieCard movie={movie} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       )}
 
@@ -182,6 +253,47 @@ export default function MoodSearch() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        .mood-loading-container {
+          display: flex;
+          justify-content: center;
+          padding: 60px 0;
+        }
+        .loader-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+        .purple-pulsar {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .pulsar-inner {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          background: radial-gradient(circle, #a855f7 0%, transparent 70%);
+          border-radius: 50%;
+          filter: blur(10px);
+        }
+        .loader-sparkle {
+          color: white;
+          z-index: 1;
+          filter: drop-shadow(0 0 10px #a855f7);
+          animation: spin 3s linear infinite;
+        }
+        .loader-text {
+          font-family: var(--font-heading);
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          color: #a855f7;
+          font-size: 1.1rem;
         }
       `}</style>
 

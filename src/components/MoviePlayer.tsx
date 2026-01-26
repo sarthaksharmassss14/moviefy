@@ -5,7 +5,12 @@ import { Play, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import ConfirmModal from "@/components/ConfirmModal";
 
-export default function MoviePlayer({ tmdbId, imdbId, originalLanguage }: { tmdbId: number; imdbId?: string; originalLanguage?: string }) {
+// Removed unused props: movieOverview, userId
+export default function MoviePlayer({ tmdbId, imdbId, originalLanguage }: {
+  tmdbId: number;
+  imdbId?: string;
+  originalLanguage?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isErrorOpen, setIsErrorOpen] = useState(false);
@@ -25,6 +30,7 @@ export default function MoviePlayer({ tmdbId, imdbId, originalLanguage }: { tmdb
       setIsErrorOpen(true);
       return;
     }
+
     setIsOpen(!isOpen);
   };
 

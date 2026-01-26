@@ -1,64 +1,180 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchFromTMDB } from "@/lib/tmdb";
 import { getGroqRecommendations } from "@/lib/groq";
+import { generateEmbedding } from "@/lib/ai";
+import { supabase } from "@/lib/supabase";
+import { auth } from "@clerk/nextjs/server";
 
 export async function POST(req: NextRequest) {
     try {
-        const { query } = await req.json();
+        const { query, excludeTitles = [] } = await req.json();
         if (!query) return NextResponse.json({ results: [] });
 
-        console.log(`[AI Mood] Starting discovery for: "${query}"`);
+        const { userId } = await auth();
 
-        // 1. Get Recommendations from Groq (LLM)
-        let recommendedTitles: string[] = [];
+        console.log(`[AI Mood] Starting discovery for: "${query}". User: ${userId || 'Guest'}. Exclude: ${excludeTitles.length} items.`);
+
+        let context = "";
+        let watchedMoviesContext = "";
+
+        // Combine manual exclusions with RAG context
+        if (excludeTitles.length > 0) {
+            watchedMoviesContext = `DONT RECOMMEND: ${excludeTitles.slice(-10).join(", ")}`;
+        }
+
+        // --- RAG & Exclusion STEP ---
+        let excludedMovieIds: number[] = [];
+        try {
+            // 1. Get user's own reviews to exclude
+            if (userId) {
+                const { data: userReviews } = await supabase
+                    .from('reviews')
+                    .select('movie_id')
+                    .eq('user_id', userId)
+                    .limit(100);
+
+                if (userReviews) {
+                    excludedMovieIds = userReviews.map(r => r.movie_id);
+                }
+            }
+
+            // 2. Retrieve relevant reviews for context
+            const queryEmbedding = await generateEmbedding(query);
+            const { data: matchedReviews } = await supabase.rpc('match_reviews', {
+                query_embedding: queryEmbedding,
+                match_threshold: 0.5,
+                match_count: 8 // Get more for better filtering
+            });
+
+            if (matchedReviews && matchedReviews.length > 0) {
+                console.log(`[AI Mood] Found ${matchedReviews.length} relevant reviews for context.`);
+                context = matchedReviews.map((r: any) => `Review: "${r.content}"`).join("\n");
+                // Inform Groq about what was watched if we can link it
+                if (userId) {
+                    const watched = matchedReviews.filter((r: any) => r.user_id === userId);
+                    if (watched.length > 0) {
+                        watchedMoviesContext = watched.map((r: any) => r.content.slice(0, 100)).join(", ");
+                    }
+                }
+            } else {
+                console.log("[AI Mood] No relevant reviews found.");
+            }
+        } catch (ragError) {
+            console.warn("[AI Mood] RAG/Exclusion failed:", ragError);
+        }
+
+        // 1. Get Recommendations from Groq
+        let recommendedObjects: any[] = [];
         const apiKey = process.env.GROQ_API_KEY;
 
-        if (apiKey && apiKey.startsWith("gsk_")) {
-            console.log("[AI Mood] GROQ_API_KEY found (masks checked). Calling Llama3...");
-            recommendedTitles = await getGroqRecommendations(query);
-            console.log(`[AI Mood] Groq suggested:`, recommendedTitles);
-        } else {
-            console.warn(`[AI Mood] GROQ_API_KEY is missing or invalid (Length: ${apiKey?.length || 0}).`);
+        if (apiKey) {
+            recommendedObjects = await getGroqRecommendations(query, context, watchedMoviesContext);
+            console.log(`[AI Mood] Groq suggested:`, recommendedObjects.map(m => `${m.title} (${m.year})`));
         }
 
-        if (recommendedTitles.length === 0) {
-            console.log("[AI Mood] No titles from Groq. Executing fallback strategy.");
+        // 2. Fetch Details and Filter 
+        const movies: any[] = [];
 
-            // Fallback Logic
-            // If query is short (e.g., "Horror movies"), search it.
-            // If query is long description (e.g., "I want a movie about space..."), search will fail, so return trending.
-            const wordCount = query.split(" ").length;
-
-            if (wordCount <= 4) {
-                console.log("[AI Mood] Fallback: Performing keyword search on TMDB.");
-                const searchRes = await fetchFromTMDB(`/search/movie?query=${encodeURIComponent(query)}`);
-                return NextResponse.json({ results: searchRes.results?.slice(0, 5) || [] });
-            } else {
-                console.log("[AI Mood] Fallback: Query too long for keyword search. Returning Trending.");
-                const trending = await fetchFromTMDB("/trending/movie/week");
-                return NextResponse.json({ results: trending.results?.slice(0, 5) || [] });
-            }
-        }
-
-        // 2. Fetch Details for each title from TMDB
-        const moviePromises = recommendedTitles.map(async (title) => {
+        // Process candidates in chunks for speed while respecting 5 movie cap
+        const processCandidate = async (rec: any) => {
             try {
-                const searchRes = await fetchFromTMDB(`/search/movie?query=${encodeURIComponent(title)}`);
-                const bestMatch = searchRes.results?.[0];
-                return bestMatch || null;
+                const isRepeat = excludeTitles.some((t: string) => t.toLowerCase() === rec.title.toLowerCase());
+                if (isRepeat) return null;
+
+                const searchRes = await fetchFromTMDB("/search/movie", {
+                    query: rec.title,
+                    primary_release_year: rec.year?.toString() || "",
+                });
+
+                const bestMatch = searchRes.results?.find((m: any) =>
+                    m.release_date?.startsWith(rec.year?.toString())
+                );
+
+                if (bestMatch) {
+                    // HOLLYWOOD PRIORITY: Filter out non-English movies for general queries
+                    const isGeneralQuery = !/(hindi|indian|bollywood|french|korean|anime|japanese|spanish|telugu|tamil|malayalam|kannada)/i.test(query);
+                    if (isGeneralQuery && bestMatch.original_language !== 'en') {
+                        console.log(`[AI Mood] Filtering out non-English movie: ${bestMatch.title} (${bestMatch.original_language})`);
+                        return null;
+                    }
+
+                    const queryYearMatch = query.match(/\b(19|20)\d{2}\b/);
+                    if (queryYearMatch && !bestMatch.release_date.startsWith(queryYearMatch[0])) return null;
+                    if (excludedMovieIds.includes(bestMatch.id)) return null;
+
+                    const details = await fetchFromTMDB(`/movie/${bestMatch.id}`);
+
+                    // Relaxed runtime for future films (often 0 or empty in TMDB for future releases)
+                    const isFutureOrCurrent = new Date(details.release_date).getFullYear() >= 2025;
+                    if (!isFutureOrCurrent && details.runtime && details.runtime < 60) return null;
+
+                    return details;
+                }
             } catch (e) {
-                console.error(`[AI Mood] Failed to find movie: ${title}`, e);
                 return null;
             }
-        });
+            return null;
+        };
 
-        const movies = (await Promise.all(moviePromises)).filter(Boolean);
+        // Chunked parallel execution
+        const chunkSize = 6;
+        for (let i = 0; i < recommendedObjects.length; i += chunkSize) {
+            const chunk = recommendedObjects.slice(i, i + chunkSize);
+            const batchResults = await Promise.all(chunk.map(processCandidate));
+
+            for (const movie of batchResults) {
+                if (movie && movies.length < 5) {
+                    movies.push(movie);
+                }
+            }
+            if (movies.length >= 5) break;
+        }
+
+        // Fallback if we didn't get enough clean results from AI (less than 5)
+        if (movies.length < 5) {
+            console.log(`[AI Mood] Insufficient results (${movies.length}/5). Running fallback...`);
+            const wordCount = query.split(" ").length;
+            let fallbackResults: any[] = [];
+
+            if (wordCount <= 3) {
+                const searchRes = await fetchFromTMDB("/search/movie", { query });
+                fallbackResults = searchRes.results || [];
+            } else {
+                const searchRes = await fetchFromTMDB("/search/movie", { query });
+                if (searchRes.results && searchRes.results.length > 0) {
+                    fallbackResults = searchRes.results;
+                } else {
+                    const trending = await fetchFromTMDB("/trending/movie/week");
+                    fallbackResults = trending.results || [];
+                }
+            }
+
+            // Populate remaining slots with filtered fallbacks
+            for (const m of fallbackResults) {
+                if (movies.length >= 5) break;
+
+                try {
+                    if (movies.some(p => p.id === m.id)) continue;
+                    if (excludedMovieIds.includes(m.id)) continue;
+
+                    // Language check (Hollywood priority)
+                    const isGeneralQuery = !/(hindi|indian|bollywood|french|korean|anime|japanese|spanish|telugu|tamil|malayalam|kannada)/i.test(query);
+                    if (isGeneralQuery && m.original_language !== 'en') continue;
+
+                    const details = await fetchFromTMDB(`/movie/${m.id}`);
+                    const isFutureOrCurrent = new Date(details.release_date).getFullYear() >= 2025;
+                    if (!isFutureOrCurrent && details.runtime && details.runtime < 60) continue;
+
+                    movies.push(details);
+                } catch (e) {
+                    continue;
+                }
+            }
+        }
 
         return NextResponse.json({ results: movies });
 
     } catch (error: any) {
-        console.error("[AI Mood Server Error]:", error.message);
-        // Fallback to empty to prevent UI crash
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

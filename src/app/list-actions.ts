@@ -8,7 +8,7 @@ export async function createList(name: string, description: string) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    const { error } = await supabase.from("movie_lists").insert({
+    const { error } = await supabase.from("lists").insert({
         user_id: userId,
         name,
         description,
@@ -22,21 +22,26 @@ export async function addMovieToList(listId: string, movieId: number) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    // Fetch current movies
+    // Check if list belongs to user (Security)
     const { data: list } = await supabase
-        .from("movie_lists")
-        .select("movies")
+        .from("lists")
+        .select("id")
         .eq("id", listId)
+        .eq("user_id", userId)
         .single();
 
-    if (!list) return;
+    if (!list) throw new Error("List not found or unauthorized");
 
-    const updatedMovies = [...(list.movies || []), movieId];
+    // Insert into list_items (normalized)
+    const { error } = await supabase.from("list_items").insert({
+        list_id: listId,
+        movie_id: movieId
+    });
 
-    await supabase
-        .from("movie_lists")
-        .update({ movies: updatedMovies })
-        .eq("id", listId);
+    if (error) {
+        // Ignore duplicate key error (already in list)
+        if (error.code !== '23505') throw error;
+    }
 
     revalidatePath("/lists");
 }

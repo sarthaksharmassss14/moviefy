@@ -98,7 +98,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
               <h1 className="movie-title-large">{movie.title}</h1>
               {director && (
                 <p className="tagline" style={{ color: '#a1a1aa', fontWeight: '500', fontSize: '1.1rem' }}>
-                  Directed by <span style={{ color: 'white' }}>{director.name}</span>
+                  Directed by <Link href={`/person/${director.id}`} className="hover:text-white transition-colors" style={{ color: 'white' }}>{director.name}</Link>
                 </p>
               )}
 
@@ -134,7 +134,11 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div className="actions" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <MoviePlayer tmdbId={movie.id} imdbId={movie.imdb_id} originalLanguage={movie.original_language} />
+                <MoviePlayer
+                  tmdbId={movie.id}
+                  imdbId={movie.imdb_id}
+                  originalLanguage={movie.original_language}
+                />
                 <WatchlistButton movieId={movie.id} initialState={isInWatchlist} />
                 <AddToListButton movieId={movie.id} lists={userLists} userId={userId || ""} />
               </div>

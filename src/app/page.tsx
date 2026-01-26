@@ -4,6 +4,7 @@ import { fetchFromTMDB } from "@/lib/tmdb";
 import { auth } from "@clerk/nextjs/server";
 import { getRecommendedMovies } from "@/lib/ai";
 import MoodSearch from "@/components/MoodSearch";
+import PickedForYouSection from "@/components/PickedForYouSection";
 
 import HeroCarousel from "@/components/HeroCarousel";
 
@@ -43,16 +44,8 @@ export default async function Home() {
 
       <div className="content-container">
         <MoodSearch />
-        {recommendations.length > 0 && (
-          <section className="movie-section">
-            <h2 className="section-title">Picked For You</h2>
-            <div className="movie-grid">
-              {recommendations.slice(0, 5).map((movie: any) => (
-                <MovieCard key={movie.id} movie={movie} />
-              ))}
-            </div>
-          </section>
-        )}
+
+        <PickedForYouSection movies={recommendations} />
 
         <section className="movie-section">
           <h2 className="section-title">Trending Today</h2>

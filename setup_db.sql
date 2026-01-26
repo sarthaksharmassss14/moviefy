@@ -83,3 +83,30 @@ create policy "Allow all list items" on list_items for all using (true) with che
 
 -- User Tastes
 create policy "Allow all tastes" on user_tastes for all using (true) with check (true);
+-- Create a function to search for reviews similar to a query embedding
+create or replace function match_reviews (
+  query_embedding vector(384),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id uuid,
+  content text,
+  movie_id integer,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    reviews.id,
+    reviews.content,
+    reviews.movie_id,
+    1 - (reviews.embedding <=> query_embedding) as similarity
+  from reviews
+  where 1 - (reviews.embedding <=> query_embedding) > match_threshold
+  order by similarity desc
+  limit match_count;
+end;
+$$;

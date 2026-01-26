@@ -22,22 +22,15 @@ export async function fetchFromTMDB(endpoint: string, params: Record<string, str
     let attempts = 0;
     const maxRetries = 3;
 
-    // Small spread to prevent rapid-fire requests hitting TMDB limits too fast
-    await new Promise(resolve => setTimeout(resolve, 100));
-
     while (attempts < maxRetries) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000); // Increased to 12s
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
         try {
             console.log(`[TMDB] Fetching: ${endpoint} (Attempt ${attempts + 1})`);
 
             const response = await fetch(url, {
                 signal: controller.signal,
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                }
             });
 
             clearTimeout(timeoutId);
@@ -59,7 +52,7 @@ export async function fetchFromTMDB(endpoint: string, params: Record<string, str
             if (attempts < maxRetries) {
                 console.warn(`[TMDB] Transient error (Attempt ${attempts}): ${errorMessage}. Retrying...`);
             } else {
-                console.error(`[TMDB Fetch Failure] Final Attempt ${attempts}:`, errorMessage);
+                console.error(`[TMDB Fetch Failure] Final Attempt ${attempts}:`, error.message, error.cause || "");
             }
 
             if (attempts >= maxRetries) {

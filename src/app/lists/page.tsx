@@ -9,8 +9,8 @@ export default async function ListsPage() {
   if (!userId) return <div>Please sign in</div>;
 
   const { data: lists } = await supabase
-    .from("movie_lists")
-    .select("*")
+    .from("lists")
+    .select("*, list_items(count)")
     .eq("user_id", userId);
 
   return (
@@ -42,7 +42,7 @@ export default async function ListsPage() {
             <div key={list.id} className="list-card glass">
               <h2>{list.name}</h2>
               <p>{list.description}</p>
-              <span className="movie-count">{list.movies?.length || 0} movies</span>
+              <span className="movie-count">{list.list_items?.[0]?.count || 0} movies</span>
             </div>
           ))}
           {lists?.length === 0 && <p className="empty">No lists created yet.</p>}

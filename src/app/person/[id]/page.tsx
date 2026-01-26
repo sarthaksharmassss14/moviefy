@@ -2,7 +2,7 @@ import { fetchFromTMDB } from "@/lib/tmdb";
 import Navbar from "@/components/Navbar";
 import MovieCard from "@/components/MovieCard";
 import Image from "next/image";
-import { Calendar, MapPin, Star } from "lucide-react";
+import { Calendar, MapPin } from "lucide-react";
 
 async function getPersonDetails(id: string) {
     const [person, movieCredits] = await Promise.all([
@@ -17,10 +17,37 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
     const { id } = await params;
     const { person, movieCredits } = await getPersonDetails(id);
 
-    // Filter movies with posters and sort by rating
-    const movies = (movieCredits.cast || [])
-        .filter((m: any) => m.poster_path && m.vote_average > 0)
+    // 1. FILTER: Only show movies where they are the 'Director'
+    const directedCredits = (movieCredits.crew || []).filter((m: any) => m.job === "Director");
+
+    // De-duplicate
+    const uniqueDirectedMap = new Map();
+    directedCredits.forEach((m: any) => {
+        if (!uniqueDirectedMap.has(m.id)) {
+            uniqueDirectedMap.set(m.id, m);
+        }
+    });
+
+    // 2. SORT: Best rated directors work
+    const candidates = Array.from(uniqueDirectedMap.values())
+        .filter((m: any) => m.poster_path)
         .sort((a: any, b: any) => b.vote_average - a.vote_average);
+
+    // 3. DURATION: Fetch full details for top movies to ensure they are >= 60 mins
+    const movies: any[] = [];
+    // We process top 30 to find at least 15 feature films
+    for (const m of candidates.slice(0, 30)) {
+        try {
+            const details = await fetchFromTMDB(`/movie/${m.id}`);
+            if (details.runtime >= 60) {
+                movies.push(details);
+            }
+        } catch (e) {
+            // If details fetch fails, only include if it looks like a real movie (has popularity)
+            if (m.vote_count > 10) movies.push(m);
+        }
+        if (movies.length >= 20) break;
+    }
 
     return (
         <main className="min-h-screen pb-20">
@@ -59,9 +86,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                                 )}
                             </div>
 
-                            <div className="glass p-6 leading-relaxed text-gray-300">
+                            <div className="glass p-6 leading-relaxed text-gray-300 max-h-[320px] overflow-y-auto custom-scrollbar">
                                 <h3 className="text-white font-bold mb-3 text-lg">Biography</h3>
-                                <p>{person.biography || "No biography available."}</p>
+                                <p className="text-sm">{person.biography || "No biography available."}</p>
                             </div>
                         </div>
                     </div>
@@ -70,12 +97,16 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
             <div className="max-w-[1200px] mx-auto px-6 mt-5">
                 <h2 className="text-3xl font-bold mb-8">
-                    Filmography <span className="text-zinc-400 text-2xl">({movies.length})</span>
+                    Directed Work <span className="text-zinc-400 text-2xl">(Sorted by Rating)</span>
                 </h2>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-8">
-                    {movies.map((movie: any) => (
-                        <MovieCard key={movie.id} movie={movie} />
-                    ))}
+                    {movies.length > 0 ? (
+                        movies.map((movie: any) => (
+                            <MovieCard key={movie.id} movie={movie} />
+                        ))
+                    ) : (
+                        <p className="text-zinc-500 italic">No full-length feature directed movies found.</p>
+                    )}
                 </div>
             </div>
         </main>
