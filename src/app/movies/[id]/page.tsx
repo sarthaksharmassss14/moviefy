@@ -60,13 +60,33 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
       }
       isInWatchlist = !!data;
 
-      // Fetch User Lists for AddToList dropdown
+      // Fetch User Lists for AddToList dropdown with their first poster
       const { data: listsData } = await supabase
         .from('lists')
         .select('id, name')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-      if (listsData) userLists = listsData;
+      if (listsData) {
+        userLists = await Promise.all(listsData.map(async (list) => {
+          const { data: items } = await supabase
+            .from('list_items')
+            .select('movie_id')
+            .eq('list_id', list.id)
+            .order('added_at', { ascending: false })
+            .limit(1);
+
+          if (items && items.length > 0) {
+            try {
+              const movieDetail = await fetchFromTMDB(`/movie/${items[0].movie_id}`);
+              return { ...list, poster_path: movieDetail.poster_path };
+            } catch (e) {
+              return { ...list, poster_path: null };
+            }
+          }
+          return { ...list, poster_path: null };
+        }));
+      }
     }
 
     const backgroundUrl = movie.backdrop_path
@@ -97,8 +117,8 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
             <div className="info-wrapper">
               <h1 className="movie-title-large">{movie.title}</h1>
               {director && (
-                <p className="tagline" style={{ color: '#a1a1aa', fontWeight: '500', fontSize: '1.1rem' }}>
-                  Directed by <Link href={`/person/${director.id}`} className="hover:text-white transition-colors" style={{ color: 'white' }}>{director.name}</Link>
+                <p className="tagline" style={{ fontWeight: '500', fontSize: '1.1rem' }}>
+                  Directed by <Link href={`/person/${director.id}`} className="director-link">{director.name}</Link>
                 </p>
               )}
 

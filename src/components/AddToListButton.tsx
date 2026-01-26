@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { ListPlus, Check, X, Plus } from "lucide-react";
+import { ListPlus, Check, X, Plus, List } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 
-interface List {
+interface UserList {
     id: number;
     name: string;
+    poster_path?: string | null;
 }
 
-export default function AddToListButton({ movieId, lists, userId }: { movieId: number, lists: List[], userId: string }) {
+export default function AddToListButton({ movieId, lists, userId }: { movieId: number, lists: UserList[], userId: string }) {
     const [isOpen, setIsOpen] = useState(false);
     const [loadingListId, setLoadingListId] = useState<number | null>(null);
     const [successListId, setSuccessListId] = useState<number | null>(null);
@@ -129,6 +130,17 @@ export default function AddToListButton({ movieId, lists, userId }: { movieId: n
                                     className="list-item-btn"
                                 >
                                     <div className="list-info">
+                                        <div className="list-thumbnail">
+                                            {list.poster_path ? (
+                                                <img
+                                                    src={`https://image.tmdb.org/t/p/w92${list.poster_path}`}
+                                                    alt=""
+                                                    className="thumb-img"
+                                                />
+                                            ) : (
+                                                <List size={14} className="text-zinc-500" />
+                                            )}
+                                        </div>
                                         <span className="list-name">{list.name}</span>
                                     </div>
 
@@ -235,9 +247,27 @@ export default function AddToListButton({ movieId, lists, userId }: { movieId: n
 
                 .list-info {
                     display: flex;
-                    flex-direction: column;
-                    gap: 2px;
+                    align-items: center;
+                    gap: 12px;
                     overflow: hidden;
+                }
+
+                .list-thumbnail {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: rgba(255,255,255,0.05);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                }
+
+                .thumb-img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
                 }
 
                 .list-name {

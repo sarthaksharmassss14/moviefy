@@ -23,8 +23,8 @@ export async function GET(request: Request) {
             .map((m: any) => ({
                 id: m.id,
                 title: m.title,
-                year: m.release_date ? m.release_date.split("-")[0] : "N/A",
-                poster: m.poster_path,
+                release_date: m.release_date || "",
+                poster_path: m.poster_path,
                 vote_average: m.vote_average || 0
             }));
 

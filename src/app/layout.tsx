@@ -22,6 +22,42 @@ export default function RootLayout({
           colorInputBackground: "#1a1a1c",
           colorInputText: "#ffffff",
         },
+        elements: {
+          socialButtonsBlockButton: {
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
+            color: "white",
+            '&:hover': {
+              backgroundColor: "#3f3f46",
+            }
+          },
+          socialButtonsBlockButtonText: {
+            color: "#ffffff !important",
+            fontWeight: "600",
+          },
+          dividerLine: {
+            backgroundColor: "#27272a",
+          },
+          dividerText: {
+            color: "#71717a",
+          },
+          formButtonPrimary: {
+            backgroundColor: "#4f46e5",
+            '&:hover': {
+              backgroundColor: "#4338ca",
+            }
+          },
+          footerActionLink: {
+            color: "#818cf8",
+            '&:hover': {
+              color: "#6366f1",
+            }
+          },
+          card: {
+            backgroundColor: "#121214",
+            border: "1px solid #27272a",
+          },
+        }
       }}
     >
       <html lang="en">

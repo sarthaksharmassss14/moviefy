@@ -96,9 +96,9 @@ export default function Navbar() {
                 >
                   <div className="suggestion-item">
                     <div className="suggestion-poster">
-                      {movie.poster ? (
+                      {movie.poster_path ? (
                         <Image
-                          src={`https://image.tmdb.org/t/p/w92${movie.poster}`}
+                          src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
                           alt={movie.title}
                           width={45}
                           height={65}
@@ -110,7 +110,9 @@ export default function Navbar() {
                     </div>
                     <div className="suggestion-info">
                       <span className="suggestion-title">{movie.title}</span>
-                      <span className="suggestion-year">{movie.year}</span>
+                      <span className="suggestion-year">
+                        {movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </Link>

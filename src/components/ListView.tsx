@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Trash2, Edit2, ArrowLeft, X, Save, Search, Plus, Loader2 } from "lucide-react";
+import { Trash2, Edit2, ArrowLeft, X, Save, Search, Plus, Loader2, Star } from "lucide-react";
 import MovieCard from "@/components/MovieCard";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -239,17 +239,17 @@ export default function ListView({ list, movies: initialMovies }: any) {
 
                             {/* DROPDOWN RESULTS */}
                             {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-3 bg-[#0f0f12]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in max-h-[320px] overflow-y-auto custom-scrollbar">
-                                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-white/5">
-                                        Suggestions
+                                <div className="absolute top-full left-0 right-0 mt-3 bg-[#0f0f12]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-fade-in max-h-[400px] overflow-y-auto custom-scrollbar">
+                                    <div className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.1em] bg-white/[0.02] border-b border-white/5">
+                                        Quick Results
                                     </div>
                                     {suggestions.map((movie) => (
                                         <button
                                             key={movie.id}
                                             onClick={() => handleAddMovie(movie)}
-                                            className="w-full flex items-center gap-4 p-3 hover:bg-white/10 transition-colors text-left border-b border-white/5 last:border-0 group relative overflow-hidden"
+                                            className="w-full flex items-center gap-4 p-4 hover:bg-indigo-500/10 transition-all text-left border-b border-white/5 last:border-0 group"
                                         >
-                                            <div className="relative w-12 h-16 bg-gray-800 rounded-md overflow-hidden flex-shrink-0 shadow-md">
+                                            <div className="relative w-12 h-[72px] bg-zinc-800 rounded-lg overflow-hidden flex-shrink-0 shadow-lg ring-1 ring-white/5 transition-transform group-hover:scale-105">
                                                 {movie.poster_path ? (
                                                     <Image
                                                         src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
@@ -258,22 +258,26 @@ export default function ListView({ list, movies: initialMovies }: any) {
                                                         className="object-cover"
                                                     />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">N/A</div>
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-[10px] text-gray-500 font-bold bg-zinc-900">
+                                                        <span>NO</span>
+                                                        <span>POSTER</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                                <h4 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors truncate">{movie.title}</h4>
-                                                <div className="flex items-center gap-3 text-xs text-gray-400">
-                                                    <span className="bg-white/10 px-1.5 py-0.5 rounded text-gray-300">
-                                                        {movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}
+                                            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                                                <h4 className="text-[15px] font-bold text-gray-100 group-hover:text-indigo-400 transition-colors truncate">{movie.title}</h4>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[11px] font-bold text-gray-500 px-2 py-0.5 rounded-full bg-white/5 border border-white/5">
+                                                        {movie.release_date ? new Date(movie.release_date).getFullYear() : 'TBA'}
                                                     </span>
-                                                    <span className="flex items-center gap-1 text-yellow-500">
-                                                        ⭐ {movie.vote_average?.toFixed(1)}
-                                                    </span>
+                                                    <div className="flex items-center gap-1 text-[11px] font-bold text-yellow-500/90">
+                                                        <Star size={12} fill="currentColor" />
+                                                        <span>{movie.vote_average?.toFixed(1)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all transform group-hover:scale-110">
-                                                <Plus size={18} />
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm group-hover:shadow-indigo-500/20 group-hover:-translate-x-1">
+                                                <Plus size={20} strokeWidth={2.5} />
                                             </div>
                                         </button>
                                     ))}

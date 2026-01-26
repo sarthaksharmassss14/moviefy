@@ -189,7 +189,7 @@ button {
 .backdrop-hero {
   height: 48vh;
   background-size: cover;
-  background-position: center;
+  background-position: center 15%;
   position: relative;
 }
 
@@ -234,6 +234,21 @@ button {
   color: var(--text-secondary);
   font-style: italic;
   margin-bottom: 24px;
+}
+
+.director-link {
+  color: white;
+  text-decoration: underline;
+  text-decoration-color: rgba(99, 102, 241, 0.4);
+  text-underline-offset: 4px;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.director-link:hover {
+  text-decoration-color: #6366f1;
+  color: #a5b4fc;
 }
 
 .meta-info {
