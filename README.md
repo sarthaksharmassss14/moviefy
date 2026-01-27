@@ -1,33 +1,25 @@
 # 🎬 Moviefy
 
-**Moviefy** is a state-of-the-art AI-powered movie discovery and exploration platform. It goes beyond simple search by using Large Language Models and Vector Databases to understand your mood, learn your taste, and recommend your next favorite film in seconds.
+**Moviefy** is a state-of-the-art AI-powered movie discovery and social watch party platform. It goes beyond simple search by using Large Language Models and Vector Databases to understand your mood, learn your taste, and connect you with friends for shared cinematic experiences.
 
+## 🚀 Key Features
 
-## 🚀 Experience the Future of Discovery
-
-* **🧠 AI Mood Discovery**: Instead of generic filters, just describe your vibe. "A mind-bending thriller for a rainy night" or "Something heartwarming to watch with my dog" — powered by **Groq (Llama 3.3)**.
+* **🧠 AI Mood Discovery**: Instead of generic filters, just describe your vibe. "A mind-bending thriller for a rainy night" — powered by **Groq (Llama 3.3)**.
+* **🍿 Social Watch Parties**: Create secure, private rooms to watch movies with friends. Includes real-time chat and session management.
 * **✨ Picked For You (RAG)**: A truly personal shelf. Using **Retrieval-Augmented Generation**, Moviefy analyzes your past ratings and reviews to suggest movies that actually match your unique taste vector.
-* **🏆 Real-World Scores**: Get the full picture with live scores from **Rotten Tomatoes, IMDb, and Metacritic**, ensuring you never waste time on a bad movie.
-* **📱 Unified Dashboard**: Manage your cinematic journey with sleek glassmorphism UI. Track your **Watchlist**, read your past **Reviews**, and organize movies into custom **Collections**.
-* **⚡ Blazing Performance**: Optimized with parallel server-side fetching and streaming, delivering a lightning-fast experience even with complex AI operations.
+* **🔒 JWT-Secured Realtime**: Industry-standard security using **Clerk session tokens** to authorize **Supabase Realtime** and RLS, ensuring private chats stay private.
+* **📱 Cinematic UI**: A premium experience with glassmorphism, viewport-locked watch rooms, and custom-built premium modals for a native-app feel.
+* **🏠 Active Sessions**: Never lose your party. Hosts can see and resume their ongoing watch parties directly from the home dashboard.
 
 ## 🛠️ Tech Stack
 
 - **Core**: [Next.js 15](https://nextjs.org/) (App Router)
 - **Authentication**: [Clerk](https://clerk.com/)
-- **Database & Vector Search**: [Supabase](https://supabase.com/) (pgvector)
+- **Database & Realtime**: [Supabase](https://supabase.com/) (Postgres Vector & Realtime)
 - **AI Engine (LLM)**: [Groq](https://groq.com/) (Llama-3.3-70b)
 - **Embeddings**: [Hugging Face Inference](https://huggingface.co/) (all-MiniLM-L6-v2)
 - **Data APIs**: [TMDB](https://www.themoviedb.org/) & [OMDb](http://www.omdbapi.com/)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-
-## ⚡ Performance Features
-
-- **Hyper-Parallel Fetching**: Parallelized API calls reduce page load waterfall by 70%.
-- **Hybrid RAG Logic**: Smart timeouts for AI context ensures the UI stays rapid even if the embedding model is cold-starting.
-- **Async Taste Updates**: Rating a movie updates your AI profile in the background, giving you instant UI feedback.
-- **Optimized Payloads**: Strategic image compression and priority loading for a premium feel.
 
 ## 📋 Getting Started
 
