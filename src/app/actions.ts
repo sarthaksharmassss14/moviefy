@@ -39,31 +39,28 @@ export async function submitReview(formData: FormData) {
         throw new Error(`Database error: ${error.message}`);
     }
 
-    // 2. BACKGROUND TASKS: Handle AI and side effects without blocking the user
-    // We don't 'await' these, so the user sees success instantly
+    // 2. Handle AI and side effects
     if (movieDescription) {
-        (async () => {
-            try {
-                // Generate embedding for the review record
-                const embed = await generateEmbedding(movieDescription);
-                const movieEmbedding = Array.isArray(embed) && Array.isArray(embed[0])
-                    ? embed[0] as number[]
-                    : embed as number[];
+        try {
+            // Generate embedding for the review record
+            const embed = await generateEmbedding(movieDescription);
+            const movieEmbedding = Array.isArray(embed) && Array.isArray(embed[0])
+                ? embed[0] as number[]
+                : embed as number[];
 
-                // Update the review with the embedding
-                await supabase.from("reviews")
-                    .update({ embedding: movieEmbedding })
-                    .eq("user_id", userId)
-                    .eq("movie_id", movieId);
+            // Update the review with the embedding
+            await supabase.from("reviews")
+                .update({ embedding: movieEmbedding })
+                .eq("user_id", userId)
+                .eq("movie_id", movieId);
 
-                // Update user taste profile for RAG if high rating
-                if (rating && rating >= 4) {
-                    await updateUserTaste(userId, movieDescription);
-                }
-            } catch (e) {
-                console.error("[submitReview] Background AI Task failed:", e);
+            // Update user taste profile for RAG if high rating
+            if (rating && rating >= 4) {
+                await updateUserTaste(userId, movieDescription);
             }
-        })();
+        } catch (e) {
+            console.error("[submitReview] AI Task failed:", e);
+        }
     }
 
     // 3. Fast Side Effects
@@ -76,6 +73,7 @@ export async function submitReview(formData: FormData) {
 
     revalidatePath(`/movies/${movieId}`);
     revalidatePath(`/profile`);
+    revalidatePath('/');
 }
 
 export async function toggleWatchlist(movieId: number) {
