@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Loader2, Link as LinkIcon, Check } from "lucide-react";
+import { Users, Loader2, Link as LinkIcon, Check, Lock } from "lucide-react";
 import { createWatchParty } from "@/app/actions";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import ConfirmModal from "./ConfirmModal";
 
 export default function WatchPartyButton({ movieId, movieTitle }: { movieId: number, movieTitle: string }) {
+    const { userId } = useAuth();
     const [isCreating, setIsCreating] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const [roomName, setRoomName] = useState(`${movieTitle}'s Party`);
     const router = useRouter();
 
@@ -32,13 +35,29 @@ export default function WatchPartyButton({ movieId, movieTitle }: { movieId: num
     return (
         <>
             <button
-                onClick={() => setShowModal(true)}
+                onClick={() => {
+                    if (!userId) {
+                        setShowLoginModal(true);
+                    } else {
+                        setShowModal(true);
+                    }
+                }}
                 className="action-btn glass flex items-center gap-2"
                 style={{ background: 'rgba(168, 85, 247, 0.15)', borderColor: 'rgba(168, 85, 247, 0.3)', color: '#a855f7' }}
             >
                 <Users size={18} />
                 Watch Party
             </button>
+
+            <ConfirmModal
+                isOpen={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                onConfirm={() => router.push('/sign-in')}
+                title="Login Required"
+                message="You need to be logged in to start or join a watch party with your friends."
+                confirmLabel="Sign In"
+                variant="primary"
+            />
 
             {showModal && (
                 <div className="modal-overlay">
