@@ -114,3 +114,57 @@ BEGIN
     RAISE NOTICE 'Table watch_party_messages might already be in publication';
   END;
 END $$;
+-- 6. VECTOR SEARCH FUNCTIONS
+-- Search for movies based on semantic similarity of reviews/descriptions
+CREATE OR REPLACE FUNCTION match_movie_recommendations (
+  query_embedding vector(384),
+  match_threshold float,
+  match_count int,
+  excluded_ids int[]
+)
+RETURNS TABLE (
+  movie_id int,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    r.movie_id,
+    1 - (r.embedding <=> query_embedding) AS similarity
+  FROM reviews r
+  WHERE 1 - (r.embedding <=> query_embedding) > match_threshold
+    AND (r.movie_id <> ALL (excluded_ids))
+  ORDER BY similarity DESC
+  LIMIT match_count;
+END;
+$$;
+
+-- Search for specific reviews based on semantic similarity (for context)
+CREATE OR REPLACE FUNCTION match_reviews (
+  query_embedding vector(384),
+  match_threshold float,
+  match_count int
+)
+RETURNS TABLE (
+  id uuid,
+  movie_id int,
+  content text,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    r.id,
+    r.movie_id,
+    r.content,
+    1 - (r.embedding <=> query_embedding) AS similarity
+  FROM reviews r
+  WHERE 1 - (r.embedding <=> query_embedding) > match_threshold
+  ORDER BY similarity DESC
+  LIMIT match_count;
+END;
+$$;

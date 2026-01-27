@@ -14,127 +14,134 @@ export async function POST(req: NextRequest) {
 
         console.log(`[AI Mood] Starting discovery for: "${query}". User: ${userId || 'Guest'}. Exclude: ${excludeTitles.length} items.`);
 
-        // --- HYPER-FAST RAG & DISCOVERY STEP ---
-        let context = "";
-        let watchedMoviesContext = "";
-        let excludedMovieIds: number[] = [];
+        // 1. Initial reasoning: Let Groq analyze the prompt and extract negative constraints and refined query
+        console.log(`[AI Mood] Reasoning query: "${query}"`);
+        const { analysis, movies: groqSuggested } = await getGroqRecommendations(query, "", "");
 
-        // 1. Parallel Context Gathering with a strict Timeout (Smart Skip)
-        console.log("[AI Mood] Gathering context and results in parallel...");
+        const refinedQuery = analysis.refined_vector_query || query;
+        const negativeConstraints = analysis.negative_constraints || [];
+        const excludedDirectors = analysis.metadata_filters?.excluded_directors || [];
 
-        const contextPromise = (async () => {
-            try {
-                const [userReviewsRes, queryEmbedding] = await Promise.all([
-                    userId ? supabase.from('reviews').select('movie_id').eq('user_id', userId).limit(100) : Promise.resolve({ data: [] }),
-                    generateEmbedding(query)
-                ]);
+        console.log(`[AI Mood] Analysis: Refined Query: "${refinedQuery}", Negatives: ${negativeConstraints.length}`);
 
-                if (userReviewsRes.data) {
-                    excludedMovieIds = userReviewsRes.data.map((r: any) => r.movie_id);
-                }
-
-                const { data: matchedReviews } = await supabase.rpc('match_reviews', {
-                    query_embedding: queryEmbedding,
-                    match_threshold: 0.5,
-                    match_count: 5
-                });
-
-                if (matchedReviews && matchedReviews.length > 0) {
-                    context = matchedReviews.map((r: any) => `Review: "${r.content}"`).join("\n");
-                }
-            } catch (e) {
-                console.warn("[AI Mood] Context retrieval failed or timed out.");
-            }
-        })();
-
-        // Race the context gathering against a 2.5s timeout
-        await Promise.race([
-            contextPromise,
-            new Promise(resolve => setTimeout(resolve, 2500))
+        // 2. Parallel Fetching: Groq Suggestions + Vector DB Candidates + User Context
+        const [queryEmbedding, userReviewsRes] = await Promise.all([
+            generateEmbedding(refinedQuery),
+            userId ? supabase.from('reviews').select('movie_id').eq('user_id', userId).limit(50) : Promise.resolve({ data: [] })
         ]);
 
-        // 2. Get Recommendations from Groq (Now we have context, or we don't, but we move FAST)
-        let recommendedObjects: any[] = [];
-        const apiKey = process.env.GROQ_API_KEY;
-
-        if (apiKey) {
-            recommendedObjects = await getGroqRecommendations(query, context, watchedMoviesContext);
+        let excludedMovieIds: number[] = [];
+        if (userReviewsRes.data) {
+            excludedMovieIds = userReviewsRes.data.map((r: any) => r.movie_id);
         }
 
-        // 3. Hyper-Parallel Detail Fetching (Process all candidates at once)
-        console.log(`[AI Mood] Fetching details for ${recommendedObjects.length} candidates...`);
+        // Search Knowledge Base (833 movies) for vector matches
+        const { data: vectorMatches } = await supabase.rpc('match_movie_recommendations', {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.25,
+            match_count: 10,
+            excluded_ids: excludedMovieIds
+        });
 
+        // 3. Unify Candidate Pool: Groq List + Vector DB Matches
+        const candidatePool = [
+            ...groqSuggested.map(m => ({ title: m.title, year: m.year })),
+            ...(vectorMatches || []).map((m: any) => ({ id: m.movie_id, isFromVector: true }))
+        ];
+
+        console.log(`[AI Mood] Scrubbing Pool of ${candidatePool.length} candidates...`);
+
+        // 4. Hyper-Parallel Detail Fetching & Scrubbing
         const movieResults = await Promise.all(
-            recommendedObjects.map(async (rec: any) => {
+            candidatePool.map(async (can: any) => {
                 try {
-                    const isRepeat = excludeTitles.some((t: string) => t.toLowerCase() === rec.title.toLowerCase());
-                    if (isRepeat) return null;
+                    let details: any = null;
 
-                    const searchRes = await fetchFromTMDB("/search/movie", {
-                        query: rec.title,
-                        primary_release_year: rec.year?.toString() || "",
-                    });
+                    if (can.id) {
+                        // Directly fetch by ID if from Vector DB
+                        details = await fetchFromTMDB(`/movie/${can.id}`, { append_to_response: "credits" });
+                    } else {
+                        // Search by title if from Groq
+                        const isRepeat = excludeTitles.some((t: string) => t.toLowerCase() === can.title.toLowerCase());
+                        if (isRepeat) return null;
 
-                    const bestMatch = searchRes.results?.[0]; // Take top match immediately for speed
-                    if (!bestMatch) return null;
+                        const searchRes = await fetchFromTMDB("/search/movie", {
+                            query: can.title,
+                            primary_release_year: can.year?.toString() || "",
+                        });
+                        const match = searchRes.results?.[0];
+                        if (!match) return null;
+                        if (excludedMovieIds.includes(match.id)) return null;
 
-                    // Exclude watched
-                    if (excludedMovieIds.includes(bestMatch.id)) return null;
+                        details = await fetchFromTMDB(`/movie/${match.id}`, { append_to_response: "credits" });
+                    }
 
-                    // Quick detail fetch for poster and runtime
-                    return await fetchFromTMDB(`/movie/${bestMatch.id}`);
+                    if (!details) return null;
+
+                    // SCRUBBING LOGIC
+                    // a) Director Check
+                    const director = details.credits?.crew?.find((c: any) => c.job === "Director")?.name || "";
+                    if (excludedDirectors.some((d: string) => director.toLowerCase().includes(d.toLowerCase()))) {
+                        console.log(`[AI Mood] Scrubbed "${details.title}": Excluded Director (${director})`);
+                        return null;
+                    }
+
+                    // b) Negative Text Check
+                    const textToSanitize = `${details.title} ${details.overview}`.toLowerCase();
+                    if (negativeConstraints.some((nc: string) => textToSanitize.includes(nc.toLowerCase()))) {
+                        console.log(`[AI Mood] Scrubbed "${details.title}": Violates Negative Constraint`);
+                        return null;
+                    }
+
+                    return details;
                 } catch (e) {
                     return null;
                 }
             })
         );
 
-        // Filter valid movies and clamp to 6 for the UI grid
-        const movies = movieResults.filter(Boolean).slice(0, 6);
+        // Filter valid, dedupe, and clamp to 6
+        const seenIds = new Set();
+        const movies = movieResults
+            .filter(Boolean)
+            .filter(m => {
+                if (seenIds.has(m.id)) return false;
+                seenIds.add(m.id);
+                return true;
+            })
+            .slice(0, 6);
 
-        // Fallback if we didn't get enough clean results from AI (less than 5)
-        if (movies.length < 5) {
-            console.log(`[AI Mood] Insufficient results (${movies.length}/5). Running fallback...`);
-            const wordCount = query.split(" ").length;
-            let fallbackResults: any[] = [];
+        // Fallback Logic (if pool was too filtered)
+        if (movies.length < 4) {
+            console.log(`[AI Mood] Cleanup left only ${movies.length} results. Running fallback search with refined query...`);
+            const searchRes = await fetchFromTMDB("/search/movie", { query: refinedQuery });
+            const fallbacks = searchRes.results || [];
 
-            if (wordCount <= 3) {
-                const searchRes = await fetchFromTMDB("/search/movie", { query });
-                fallbackResults = searchRes.results || [];
-            } else {
-                const searchRes = await fetchFromTMDB("/search/movie", { query });
-                if (searchRes.results && searchRes.results.length > 0) {
-                    fallbackResults = searchRes.results;
-                } else {
-                    const trending = await fetchFromTMDB("/trending/movie/week");
-                    fallbackResults = trending.results || [];
-                }
-            }
-
-            // Populate remaining slots with filtered fallbacks
-            for (const m of fallbackResults) {
-                if (movies.length >= 5) break;
+            for (const fb of fallbacks) {
+                if (movies.length >= 6) break;
+                if (seenIds.has(fb.id) || excludedMovieIds.includes(fb.id)) continue;
 
                 try {
-                    if (movies.some(p => p.id === m.id)) continue;
-                    if (excludedMovieIds.includes(m.id)) continue;
+                    const details = await fetchFromTMDB(`/movie/${fb.id}`, { append_to_response: "credits" });
+                    if (!details) continue;
 
-                    // Language check (Hollywood priority)
-                    const isGeneralQuery = !/(hindi|indian|bollywood|french|korean|anime|japanese|spanish|telugu|tamil|malayalam|kannada)/i.test(query);
-                    if (isGeneralQuery && m.original_language !== 'en') continue;
+                    // Apply same scrubbing to fallbacks
+                    const director = details.credits?.crew?.find((c: any) => c.job === "Director")?.name || "";
+                    if (excludedDirectors.some((d: string) => director.toLowerCase().includes(d.toLowerCase()))) continue;
 
-                    const details = await fetchFromTMDB(`/movie/${m.id}`);
-                    const isFutureOrCurrent = new Date(details.release_date).getFullYear() >= 2025;
-                    if (!isFutureOrCurrent && details.runtime && details.runtime < 60) continue;
+                    const text = `${details.title} ${details.overview}`.toLowerCase();
+                    if (negativeConstraints.some((nc: string) => text.includes(nc.toLowerCase()))) continue;
 
                     movies.push(details);
-                } catch (e) {
-                    continue;
-                }
+                    seenIds.add(details.id);
+                } catch (e) { continue; }
             }
         }
 
-        return NextResponse.json({ results: movies });
+        return NextResponse.json({
+            results: movies,
+            analysis: analysis
+        });
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
