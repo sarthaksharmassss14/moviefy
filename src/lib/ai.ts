@@ -20,10 +20,10 @@ export async function generateEmbedding(text: string | string[]): Promise<number
     return await getLocalEmbedding(text);
 }
 
-export async function updateUserTaste(userId: string, movieDescription: string) {
+export async function updateUserTaste(userId: string, movieDescription: string, preEmbedding?: number[]) {
     console.log(`[AI] Updating taste profile for user ${userId}...`);
     try {
-        const newEmbedding = await generateEmbedding(movieDescription) as number[];
+        const newEmbedding = preEmbedding || await generateEmbedding(movieDescription) as number[];
 
         const { data: existing, error: fetchError } = await supabase
             .from("user_tastes")
@@ -46,9 +46,12 @@ export async function updateUserTaste(userId: string, movieDescription: string) 
             const currentCount = existing.rating_count || 1;
             newCount = currentCount + 1;
 
-            // True Average: ((OldVector * Count) + NewVector) / (Count + 1)
+            // Shift Logic: If the user has few ratings, make the NEW one more impactful
+            // This makes the 'Picked for You' change faster for testing
+            const weight = newCount <= 5 ? 0.4 : (1 / newCount);
+
             updatedVector = currentVector.map((val, i) =>
-                ((val * currentCount) + newEmbedding[i]) / newCount
+                (val * (1 - weight)) + (newEmbedding[i] * weight)
             );
         }
 
@@ -62,7 +65,7 @@ export async function updateUserTaste(userId: string, movieDescription: string) 
             });
 
         if (upsertError) throw upsertError;
-        console.log(`[AI] Taste profile updated with ${newCount} samples.`);
+        console.log(`[AI] Taste profile updated. (Weight: ${newCount <= 5 ? '40%' : 'N-Avg'})`);
     } catch (e: any) {
         console.error("[AI] Critical error in updateUserTaste:", e.message);
     }

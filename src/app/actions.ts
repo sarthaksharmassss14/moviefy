@@ -56,7 +56,7 @@ export async function submitReview(formData: FormData) {
 
             // Update user taste profile for RAG if high rating
             if (rating && rating >= 4) {
-                await updateUserTaste(userId, movieDescription);
+                await updateUserTaste(userId, movieDescription, movieEmbedding);
             }
         } catch (e) {
             console.error("[submitReview] AI Task failed:", e);

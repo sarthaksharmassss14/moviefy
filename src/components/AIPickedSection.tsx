@@ -1,6 +1,8 @@
 import { getPickedForYou } from "@/lib/ai";
 import PickedForYouSection from "./PickedForYouSection";
 
+export const revalidate = 0;
+
 interface AIPickedSectionProps {
     userId: string | null;
 }
