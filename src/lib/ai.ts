@@ -1,14 +1,9 @@
-import { HfInference } from "@huggingface/inference";
 import { supabase } from "./supabase";
-
-const hf = new HfInference(process.env.HF_TOKEN);
+import { getLocalEmbedding } from "./embedding";
 
 export async function generateEmbedding(text: string | string[]): Promise<number[] | number[][]> {
-    const result = await hf.featureExtraction({
-        model: "sentence-transformers/all-MiniLM-L6-v2",
-        inputs: text,
-    });
-    return result as any;
+    // Uses local ONNX model via Transformers.js
+    return await getLocalEmbedding(text);
 }
 
 export async function updateUserTaste(userId: string, movieDescription: string) {
