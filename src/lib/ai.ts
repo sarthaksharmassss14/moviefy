@@ -97,13 +97,19 @@ export async function getPickedForYou(userId: string) {
     try {
         // 1. Get user taste vector, rated movies, and watchlist
         const [tasteRes, ratedRes, watchlistRes] = await Promise.all([
-            supabase.from("user_tastes").select("taste_vector").eq("user_id", userId).single(),
+            supabase.from("user_tastes").select("taste_vector, rating_count").eq("user_id", userId).single(),
             supabase.from("reviews").select("movie_id").eq("user_id", userId),
             supabase.from("watchlist").select("movie_id").eq("user_id", userId)
         ]);
 
         if (!tasteRes.data?.taste_vector) {
             console.log("[AI] No taste profile found. Falling back to trending.");
+            return [];
+        }
+
+        const ratingCount = tasteRes.data.rating_count || 0;
+        if (ratingCount < 4) {
+            console.log(`[AI] User has only rated ${ratingCount} movies. Need 4-5 for personalized picks.`);
             return [];
         }
 

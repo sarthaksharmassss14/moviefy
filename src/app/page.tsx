@@ -156,7 +156,7 @@ export default async function Home() {
         </Suspense>
 
         <Suspense fallback={<div className="section-loader" />}>
-          <AIPickedSection userId={userId} trendingMovies={trendingData?.results || []} />
+          <AIPickedSection userId={userId} />
         </Suspense>
 
         <Suspense fallback={<div className="section-loader" />}>

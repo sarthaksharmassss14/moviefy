@@ -6,6 +6,7 @@ import { Send, Users, Share2, LogOut, Check, Copy, MessageSquare, Play, Pause, R
 import { sendPartyMessage } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "./ConfirmModal";
+import Toast from "./Toast";
 import { useAuth } from "@clerk/nextjs";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -23,6 +24,8 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
     const [currentTime, setCurrentTime] = useState(0);
     const [syncLoading, setSyncLoading] = useState(false);
     const [syncKey, setSyncKey] = useState(0);
+
+    const [toast, setToast] = useState<{ message: string; isVisible: boolean }>({ message: "", isVisible: false });
 
     const broadcastPlayback = (time: number, playing: boolean) => {
         const channel = (window as any).party_channel;
@@ -117,8 +120,39 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     const uniqueMembersMap = new Map();
                     allPresences.forEach((p: any) => { if (p.user) uniqueMembersMap.set(p.user.id, p.user); });
                     const members = Array.from(uniqueMembersMap.values());
-                    setParticipants(members);
+
+                    setParticipants((prev) => {
+                        // Optional: Detect changes here if sync runs periodically, but join/leave events are better for notifications
+                        return members;
+                    });
+
                     if (!isHost && !members.some((m: any) => m.id === user.id) && members.length >= 5) setIsFull(true);
+                })
+                .on("presence", { event: "join" }, ({ newPresences }: any) => {
+                    newPresences.forEach((p: any) => {
+                        if (p.user && p.user.id !== user.id) {
+                            console.log("User Joined:", p.user.name);
+                            setToast({ message: `${p.user.name} joined the party!`, isVisible: true });
+                            setMessages(prev => [...prev, {
+                                id: `sys-join-${Date.now()}-${p.user.id}`,
+                                isSystem: true,
+                                content: `${p.user.name} joined the party`
+                            }]);
+                        }
+                    });
+                })
+                .on("presence", { event: "leave" }, ({ leftPresences }: any) => {
+                    leftPresences.forEach((p: any) => {
+                        if (p.user && p.user.id !== user.id) {
+                            console.log("User Left:", p.user.name);
+                            setToast({ message: `${p.user.name} left the room.`, isVisible: true });
+                            setMessages(prev => [...prev, {
+                                id: `sys-leave-${Date.now()}-${p.user.id}`,
+                                isSystem: true,
+                                content: `${p.user.name} left the room`
+                            }]);
+                        }
+                    });
                 })
                 .subscribe(async (status: string) => {
                     if (status === "SUBSCRIBED") {
@@ -241,14 +275,23 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                 </div>
 
                 <div className="chat-messages">
-                    {messages.map((msg: any) => (
-                        <div key={msg.id} className={`chat-msg ${msg.user_id === user.id ? 'sent' : 'received'}`}>
-                            {msg.user_id !== user.id && <span className="chat-user-name">{msg.user_name}</span>}
-                            <div className="chat-bubble">
-                                {msg.content}
+                    {messages.map((msg: any) => {
+                        if (msg.isSystem) {
+                            return (
+                                <div key={msg.id} className="chat-system-msg">
+                                    <span>{msg.content}</span>
+                                </div>
+                            );
+                        }
+                        return (
+                            <div key={msg.id} className={`chat-msg ${msg.user_id === user.id ? 'sent' : 'received'}`}>
+                                {msg.user_id !== user.id && <span className="chat-user-name">{msg.user_name}</span>}
+                                <div className="chat-bubble">
+                                    {msg.content}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     <div ref={chatEndRef} />
                 </div>
 
@@ -293,6 +336,13 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     </button>
                 </form>
             </aside>
+
+            <Toast
+                message={toast.message}
+                isVisible={toast.isVisible}
+                onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+                type="success"
+            />
 
             <style jsx>{`
                 .party-layout {
@@ -440,6 +490,17 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                 .sent .chat-bubble { background: #6366f1; border-bottom-right-radius: 4px; }
                 .received .chat-bubble { background: rgba(255,255,255,0.08); border-bottom-left-radius: 4px; }
                 
+                .chat-system-msg {
+                    align-self: center;
+                    font-size: 0.75rem;
+                    color: #a1a1aa;
+                    background: rgba(255,255,255,0.05);
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    margin: 8px 0;
+                    border: 1px solid rgba(255,255,255,0.05);
+                }
+
                 .chat-input-area {
                     padding: 16px;
                     display: flex;
