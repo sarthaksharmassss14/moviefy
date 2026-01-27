@@ -3,16 +3,14 @@ import { fetchFromTMDB } from "@/lib/tmdb";
 import Navbar from "@/components/Navbar";
 import ListView from "@/components/ListView";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 
 export default async function ListPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
-    // Auth Check
+    // 1. Get current user (might be null)
     const { userId } = await auth();
-    if (!userId) redirect("/");
 
-    // Fetch List Details
+    // 2. Fetch List Details
     const { data: list, error } = await supabase
         .from('lists')
         .select('*')
@@ -29,26 +27,26 @@ export default async function ListPage({ params }: { params: Promise<{ id: strin
         );
     }
 
-    // Security Check: Only allow owner to view/edit (for now)
-    if (list.user_id !== userId) {
+    // 3. Security Check: Allow owner or public list viewing
+    const isOwner = userId === list.user_id;
+    if (!list.is_public && !isOwner) {
         return (
             <main className="min-h-screen pt-24 pb-20 px-4 text-center">
                 <Navbar />
-                <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-                <p className="text-gray-400">You do not have permission to view this list.</p>
+                <h1 className="text-2xl font-bold text-white mb-2">Private List</h1>
+                <p className="text-gray-400">This list is private and can only be viewed by the owner.</p>
             </main>
         );
     }
 
-    // Fetch List Items (Movie IDs)
+    // 4. Fetch List Items (Movie IDs)
     const { data: items } = await supabase
         .from('list_items')
         .select('movie_id, added_at')
         .eq('list_id', id)
         .order('added_at', { ascending: false });
 
-    // Fetch Movie Details from TMDB
-    // We filter out any null results in case a movie ID is invalid or API fails
+    // 5. Fetch Movie Details from TMDB
     const movies = (await Promise.all(
         (items || []).map(async (item) => {
             if (!item.movie_id) return null;
@@ -67,5 +65,5 @@ export default async function ListPage({ params }: { params: Promise<{ id: strin
             <Navbar />
             <ListView list={list} movies={movies} />
         </main>
-    )
+    );
 }

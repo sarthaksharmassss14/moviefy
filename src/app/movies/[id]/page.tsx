@@ -12,6 +12,8 @@ import WatchlistButton from "@/components/WatchlistButton";
 import LoginPrompt from "@/components/LoginPrompt";
 import { Suspense } from "react";
 import MovieScores from "@/components/MovieScores";
+import Footer from "@/components/Footer";
+import WatchPartyButton from "@/components/WatchPartyButton";
 
 // This function is now optimized to use a single TMDB call
 async function getMovieDetails(id: string) {
@@ -118,7 +120,9 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
 
               <div className="genres">
                 {movie.genres.map((g: any) => (
-                  <span key={g.id} className="genre-tag">{g.name}</span>
+                  <Link key={g.id} href={`/search?genre=${g.id}`} className="genre-tag-link">
+                    <span className="genre-tag">{g.name}</span>
+                  </Link>
                 ))}
               </div>
 
@@ -129,7 +133,12 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                   ))}
                 </div>
               }>
-                <MovieScores imdbId={movie.imdb_id} tmdbRating={movie.vote_average} />
+                <MovieScores
+                  imdbId={movie.imdb_id}
+                  tmdbId={movie.id}
+                  tmdbRating={movie.vote_average}
+                  movieTitle={movie.title}
+                />
               </Suspense>
 
               <div className="actions" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
@@ -137,6 +146,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                   tmdbId={movie.id}
                   imdbId={movie.imdb_id}
                   originalLanguage={movie.original_language}
+                  runtime={movie.runtime}
                 />
                 <WatchlistButton
                   movieId={movie.id}
@@ -145,6 +155,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
                   userRating={userRating}
                 />
                 <AddToListButton movieId={movie.id} lists={userLists} userId={userId || ""} />
+                <WatchPartyButton movieId={movie.id} movieTitle={movie.title} />
               </div>
             </div>
           </div>
@@ -206,6 +217,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+        <Footer />
       </main>
     );
   } catch (error: any) {

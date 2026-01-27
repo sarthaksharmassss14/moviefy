@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { UserButton, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
-import { Search, Film, Heart, List, Home, Loader2, LogOut } from "lucide-react";
+import { Search, Film, Heart, List, Home, Loader2, LogOut, SlidersHorizontal } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -80,6 +80,9 @@ export default function Navbar() {
               onChange={(e) => setSearch(e.target.value)}
               onFocus={() => search.length >= 2 && setShowSuggestions(true)}
             />
+            <Link href="/search" className="filter-btn" title="Advanced Filters">
+              <SlidersHorizontal size={18} />
+            </Link>
           </form>
 
           {showSuggestions && suggestions.length > 0 && (
@@ -211,6 +214,19 @@ export default function Navbar() {
         }
         .search-icon {
           color: var(--text-secondary);
+        }
+        .filter-btn {
+          color: var(--text-secondary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+        .filter-btn:hover {
+          color: white;
+          background: rgba(255, 255, 255, 0.1);
         }
         .suggestions-dropdown {
           position: absolute;

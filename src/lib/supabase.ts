@@ -5,6 +5,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export const getSupabaseClient = (supabaseToken?: string) => {
+    return createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+            headers: {
+                Authorization: supabaseToken ? `Bearer ${supabaseToken}` : "",
+            },
+        },
+    });
+};
+
 export type Review = {
     id: string;
     user_id: string;
@@ -26,5 +36,6 @@ export type MovieList = {
     name: string;
     description: string;
     movies: number[];
+    is_public: boolean;
     created_at: string;
 };

@@ -100,6 +100,17 @@ export const MOVIE_GENRES: Record<number, string> = {
     37: "Western",
 };
 
+export const MOVIE_LANGUAGES: Record<string, string> = {
+    en: "English",
+    hi: "Hindi",
+    es: "Spanish",
+    fr: "French",
+    ja: "Japanese",
+    ko: "Korean",
+    de: "German",
+    it: "Italian",
+};
+
 export async function fetchFromOMDb(imdbId: string) {
     if (!imdbId) return null;
 

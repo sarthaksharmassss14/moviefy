@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: "Create lists, rate movies, and get AI-powered recommendations based on your taste.",
 };
 
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
+        // ... existing appearance config
         variables: {
           colorPrimary: "#6366f1",
           colorBackground: "#121214",
@@ -61,7 +63,9 @@ export default function RootLayout({
       }}
     >
       <html lang="en">
-        <body>{children}</body>
+        <body>
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );

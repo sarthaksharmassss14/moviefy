@@ -2,15 +2,15 @@
 
 import { UserProfile, SignOutButton } from "@clerk/nextjs";
 import MovieCard from "@/components/MovieCard";
-import { Star, Heart, MessageSquare, Settings, Film, ArrowLeft, List, Home, PlusCircle, X, Loader2, LogOut } from "lucide-react";
+import { Star, Heart, MessageSquare, Settings, Film, ArrowLeft, List, Home, PlusCircle, X, Loader2, LogOut, Library, Share2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 
-export default function ProfileView({ user, watchlist, reviews, lists = [] }: any) {
-    const [activeTab, setActiveTab] = useState<"watchlist" | "reviews" | "lists" | "settings">("watchlist");
+export default function ProfileView({ user, watchlist, reviews, lists = [], library = { watching: [], finished: [] } }: any) {
+    const [activeTab, setActiveTab] = useState<"library" | "watchlist" | "reviews" | "lists" | "settings">("library");
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newListName, setNewListName] = useState("");
     const [newListDesc, setNewListDesc] = useState("");
@@ -29,7 +29,7 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
 
     useEffect(() => {
         const tab = searchParams.get("tab") as any;
-        if (tab && ["watchlist", "reviews", "lists", "settings"].includes(tab)) {
+        if (tab && ["library", "watchlist", "reviews", "lists", "settings"].includes(tab)) {
             setActiveTab(tab);
         }
     }, [searchParams]);
@@ -68,6 +68,19 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
         }
     };
 
+    const handleShareList = (e: React.MouseEvent, listId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const url = `${window.location.origin}/lists/${listId}`;
+        navigator.clipboard.writeText(url);
+        setAlertConfig({
+            isOpen: true,
+            title: "Link Copied!",
+            message: "The public link to this list has been copied to your clipboard. Anyone with this link can view your collection!",
+            variant: "success"
+        });
+    };
+
     return (
         <main className="profile-container">
             {/* Header */}
@@ -93,6 +106,13 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
                         Home
                     </Link>
                     <div className="divider"></div>
+                    <button
+                        onClick={() => setActiveTab("library")}
+                        className={`tab-btn ${activeTab === "library" ? "active" : ""}`}
+                    >
+                        <Library size={18} />
+                        Library
+                    </button>
                     <button
                         onClick={() => setActiveTab("watchlist")}
                         className={`tab-btn ${activeTab === "watchlist" ? "active" : ""}`}
@@ -130,6 +150,49 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
                     </SignOutButton>
                 </div>
             </div>
+
+            {/* TAB CONTENT: LIBRARY */}
+            {activeTab === "library" && (
+                <div className="dashboard-content animate-fade-in">
+                    {/* Continue Watching */}
+                    <section className="section-block">
+                        <h2 className="section-title">
+                            <Library className="icon md:inline hidden" size={24} color="#6366f1" />
+                            Continue Watching <span className="count">({library.watching.length})</span>
+                        </h2>
+                        {library.watching.length > 0 ? (
+                            <div className="movie-grid-compact">
+                                {library.watching.map((movie: any) => (
+                                    <MovieCard key={movie.id} movie={movie} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-state">
+                                <p>No movies in progress. Start watching something!</p>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Watch History */}
+                    <section className="section-block">
+                        <h2 className="section-title">
+                            <Film className="icon md:inline hidden" size={24} color="#a855f7" />
+                            Watch History <span className="count">({library.finished.length})</span>
+                        </h2>
+                        {library.finished.length > 0 ? (
+                            <div className="movie-grid-compact">
+                                {library.finished.map((movie: any) => (
+                                    <MovieCard key={movie.id} movie={movie} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-state">
+                                <p>You haven't finished any movies yet.</p>
+                            </div>
+                        )}
+                    </section>
+                </div>
+            )}
 
             {/* TAB CONTENT: WATCHLIST */}
             {activeTab === "watchlist" && (
@@ -265,12 +328,21 @@ export default function ProfileView({ user, watchlist, reviews, lists = [] }: an
                                             )}
                                         </div>
                                         <div className="list-card-info">
-                                            <h3 className="list-name-premium">{list.name}</h3>
-                                            <div className="list-meta-premium">
-                                                <span>{new Date(list.created_at).toLocaleDateString()}</span>
-                                                <span className="dot">•</span>
-                                                <span>Collection</span>
+                                            <div className="list-card-text">
+                                                <h3 className="list-name-premium">{list.name}</h3>
+                                                <div className="list-meta-premium">
+                                                    <span>{new Date(list.created_at).toLocaleDateString()}</span>
+                                                    <span className="dot">•</span>
+                                                    <span>Collection</span>
+                                                </div>
                                             </div>
+                                            <button
+                                                className="share-list-btn"
+                                                onClick={(e) => handleShareList(e, list.id)}
+                                                title="Share this list"
+                                            >
+                                                <Share2 size={18} />
+                                            </button>
                                         </div>
                                     </Link>
                                 ))}
