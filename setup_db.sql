@@ -39,7 +39,7 @@ CREATE TABLE reviews (
     movie_id INTEGER NOT NULL,
     rating INTEGER,
     content TEXT,
-    embedding vector(1536),
+    embedding vector(384),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id, movie_id)
 );

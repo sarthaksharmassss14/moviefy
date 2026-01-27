@@ -1,13 +1,12 @@
 import { supabase } from "./supabase";
-import { getLocalEmbedding } from "./embedding";
 import { HfInference } from "@huggingface/inference";
 
 const hf = new HfInference(process.env.HF_TOKEN);
 
 export async function generateEmbedding(text: string | string[]): Promise<number[] | number[][]> {
     // 1. Production (Vercel): Use external API to avoid serverless timeouts/memory crashes
-    if (process.env.VERCEL) {
-        console.log("[AI] Production detected: Using HuggingFace API for embeddings...");
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+        console.log("[AI] Production/Vercel detected: Using HuggingFace API...");
         const result = await hf.featureExtraction({
             model: "sentence-transformers/all-MiniLM-L6-v2",
             inputs: text,
@@ -15,8 +14,9 @@ export async function generateEmbedding(text: string | string[]): Promise<number
         return result as any;
     }
 
-    // 2. Local: Use fast, local ONNX model
+    // 2. Local: Use fast, local ONNX model (Dynamic import for safety)
     console.log("[AI] Local detected: Using on-device RAG...");
+    const { getLocalEmbedding } = await import("./embedding");
     return await getLocalEmbedding(text);
 }
 
