@@ -156,19 +156,41 @@ export async function getPickedForYou(userId: string) {
 
         // 3. Fallback: Content-based filtering using TMDB (if RAG failed)
         if (recommendedMovies.length === 0 && actualReviews.length > 0) {
-            // Find the most recently liked movie (rating >= 4)
-            const lastLiked = actualReviews.find((r: any) => r.rating >= 4);
+            console.log("[AI] RAG returned 0 results. engaging Multi-Source TMDB Fallback.");
 
-            if (lastLiked) {
-                console.log(`[AI] RAG empty. Falling back to TMDB recommendations based on Movie ID ${lastLiked.movie_id}...`);
+            // Get top 3 highly rated movies (favoring recent ones)
+            const topLiked = actualReviews
+                .filter((r: any) => r.rating >= 4)
+                .sort((a: any, b: any) => {
+                    // Sort by rating desc, then created_at desc
+                    if (b.rating !== a.rating) return b.rating - a.rating;
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                })
+                .slice(0, 3);
+
+            if (topLiked.length > 0) {
+                console.log(`[AI] Generating recommendations based on ${topLiked.length} favorite movies:`, topLiked.map((m: any) => m.movie_id));
                 try {
-                    const fallbackData = await fetchFromTMDB(`/movie/${lastLiked.movie_id}/recommendations`);
-                    const rawFallback = fallbackData?.results || [];
+                    const fallbackPromises = topLiked.map((m: any) =>
+                        fetchFromTMDB(`/movie/${m.movie_id}/recommendations`).then(res => res?.results || [])
+                    );
 
-                    // Filter excluded
-                    recommendedMovies = rawFallback.filter((m: any) => !excludedIds.includes(m.id)).slice(0, 10);
+                    const resultsArrays = await Promise.all(fallbackPromises);
+                    const combined = resultsArrays.flat();
+
+                    // Deduplicate and Exclude
+                    const seen = new Set(excludedIds);
+                    recommendedMovies = combined.filter((m: any) => {
+                        if (!m || seen.has(m.id)) return false;
+                        seen.add(m.id);
+                        return true;
+                    });
+
+                    // Shuffle slightly to mix sources
+                    recommendedMovies = recommendedMovies.sort(() => Math.random() - 0.5).slice(0, 10);
+
                 } catch (err) {
-                    console.error("[AI] Fallback failed:", err);
+                    console.error("[AI] Multi-Source Fallback failed:", err);
                 }
             } else {
                 console.log("[AI] No highly rated movies found to base fallback on.");
