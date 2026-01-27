@@ -102,14 +102,24 @@ export async function getPickedForYou(userId: string) {
             supabase.from("watchlist").select("movie_id").eq("user_id", userId)
         ]);
 
+        console.log(`[AI] Taste Probe for ${userId}:`, {
+            hasVector: !!tasteRes.data?.taste_vector,
+            ratingCount: tasteRes.data?.rating_count,
+            ratedCount: ratedRes.data?.length,
+            error: tasteRes.error?.message
+        });
+
         if (!tasteRes.data?.taste_vector) {
             console.log("[AI] No taste profile found. Falling back to trending.");
             return [];
         }
 
         const ratingCount = tasteRes.data.rating_count || 0;
-        if (ratingCount < 4) {
-            console.log(`[AI] User has only rated ${ratingCount} movies. Need 4-5 for personalized picks.`);
+        // Check actual reviews length as backup if rating_count is out of sync
+        const actualRatedCount = ratedRes.data?.length || 0;
+
+        if (ratingCount < 4 && actualRatedCount < 4) {
+            console.log(`[AI] Insufficient data. Rating Count: ${ratingCount}, Actual Reviews: ${actualRatedCount}. Need 4.`);
             return [];
         }
 
@@ -123,17 +133,22 @@ export async function getPickedForYou(userId: string) {
         // 2. Vector search in database for similar movie embeddings
         const { data: matched, error: rpcError } = await supabase.rpc('match_movie_recommendations', {
             query_embedding: userVector,
-            match_threshold: 0.3, // Lowered from 0.4 for better discovery
+            match_threshold: 0.25, // Lowered slightly more to ensure matches
             match_count: 15,
             excluded_ids: excludedIds
         });
 
-        if (rpcError) throw rpcError;
+        if (rpcError) {
+            console.error("[AI] RPC Error:", rpcError);
+            throw rpcError;
+        }
 
         if (!matched || matched.length === 0) {
-            console.log("[AI] No similar movies found in Knowledge Base.");
+            console.log("[AI] No similar movies found in Knowledge Base (Vector Search returned 0).");
             return [];
         }
+
+        console.log(`[AI] Found ${matched.length} vector matches. Fetching details...`);
 
         // 3. Fetch details from TMDB
         const { fetchFromTMDB } = await import("./tmdb");
@@ -147,7 +162,9 @@ export async function getPickedForYou(userId: string) {
             })
         );
 
-        return recommendedMovies.filter(Boolean);
+        const validMovies = recommendedMovies.filter(Boolean);
+        console.log(`[AI] Returning ${validMovies.length} valid movies to UI.`);
+        return validMovies;
     } catch (e: any) {
         console.error("[AI] PickedForYou Error:", e.message);
         return [];
