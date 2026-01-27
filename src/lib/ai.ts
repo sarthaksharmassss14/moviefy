@@ -98,7 +98,7 @@ export async function getPickedForYou(userId: string) {
         // 1. Get user taste vector, rated movies, and watchlist
         const [tasteRes, ratedRes, watchlistRes] = await Promise.all([
             supabase.from("user_tastes").select("taste_vector, rating_count").eq("user_id", userId).single(),
-            supabase.from("reviews").select("movie_id").eq("user_id", userId),
+            supabase.from("reviews").select("movie_id, rating, created_at").eq("user_id", userId).order('created_at', { ascending: false }),
             supabase.from("watchlist").select("movie_id").eq("user_id", userId)
         ]);
 
@@ -109,62 +109,76 @@ export async function getPickedForYou(userId: string) {
             error: tasteRes.error?.message
         });
 
-        if (!tasteRes.data?.taste_vector) {
-            console.log("[AI] No taste profile found. Falling back to trending.");
-            return [];
-        }
-
-        const ratingCount = tasteRes.data.rating_count || 0;
-        // Check actual reviews length as backup if rating_count is out of sync
-        const actualRatedCount = ratedRes.data?.length || 0;
+        const ratingCount = tasteRes.data?.rating_count || 0;
+        const actualReviews = ratedRes.data || [];
+        const actualRatedCount = actualReviews.length;
 
         if (ratingCount < 4 && actualRatedCount < 4) {
             console.log(`[AI] Insufficient data. Rating Count: ${ratingCount}, Actual Reviews: ${actualRatedCount}. Need 4.`);
             return [];
         }
 
-        const userVector = tasteRes.data.taste_vector;
-        const ratedIds = (ratedRes.data || []).map(r => r.movie_id);
+        const userVector = tasteRes.data?.taste_vector;
+        const ratedIds = actualReviews.map(r => r.movie_id);
         const watchlistIds = (watchlistRes.data || []).map(w => w.movie_id);
-
-        // Exclude both rated and watchlisted movies
         const excludedIds = Array.from(new Set([...ratedIds, ...watchlistIds]));
 
-        // 2. Vector search in database for similar movie embeddings
-        const { data: matched, error: rpcError } = await supabase.rpc('match_movie_recommendations', {
-            query_embedding: userVector,
-            match_threshold: 0.25, // Lowered slightly more to ensure matches
-            match_count: 15,
-            excluded_ids: excludedIds
-        });
-
-        if (rpcError) {
-            console.error("[AI] RPC Error:", rpcError);
-            throw rpcError;
-        }
-
-        if (!matched || matched.length === 0) {
-            console.log("[AI] No similar movies found in Knowledge Base (Vector Search returned 0).");
-            return [];
-        }
-
-        console.log(`[AI] Found ${matched.length} vector matches. Fetching details...`);
-
-        // 3. Fetch details from TMDB
+        let recommendedMovies: any[] = [];
         const { fetchFromTMDB } = await import("./tmdb");
-        const recommendedMovies = await Promise.all(
-            matched.map(async (m: any) => {
+
+        // 2. Try RAG (Vector Search) if vector exists
+        if (userVector) {
+            const { data: matched, error: rpcError } = await supabase.rpc('match_movie_recommendations', {
+                query_embedding: userVector,
+                match_threshold: 0.25,
+                match_count: 15,
+                excluded_ids: excludedIds
+            });
+
+            if (rpcError) console.error("[AI] RPC Error:", rpcError);
+
+            if (matched && matched.length > 0) {
+                console.log(`[AI] Found ${matched.length} vector matches. Fetching details...`);
+                const ragResults = await Promise.all(
+                    matched.map(async (m: any) => {
+                        try {
+                            return await fetchFromTMDB(`/movie/${m.movie_id}`);
+                        } catch (e) {
+                            return null;
+                        }
+                    })
+                );
+                recommendedMovies = ragResults.filter(Boolean);
+            } else {
+                console.log("[AI] No similar movies found in Knowledge Base (Vector Search returned 0).");
+            }
+        }
+
+        // 3. Fallback: Content-based filtering using TMDB (if RAG failed)
+        if (recommendedMovies.length === 0 && actualReviews.length > 0) {
+            // Find the most recently liked movie (rating >= 4)
+            const lastLiked = actualReviews.find((r: any) => r.rating >= 4);
+
+            if (lastLiked) {
+                console.log(`[AI] RAG empty. Falling back to TMDB recommendations based on Movie ID ${lastLiked.movie_id}...`);
                 try {
-                    return await fetchFromTMDB(`/movie/${m.movie_id}`);
-                } catch (e) {
-                    return null;
+                    const fallbackData = await fetchFromTMDB(`/movie/${lastLiked.movie_id}/recommendations`);
+                    const rawFallback = fallbackData?.results || [];
+
+                    // Filter excluded
+                    recommendedMovies = rawFallback.filter((m: any) => !excludedIds.includes(m.id)).slice(0, 10);
+                } catch (err) {
+                    console.error("[AI] Fallback failed:", err);
                 }
-            })
-        );
+            } else {
+                console.log("[AI] No highly rated movies found to base fallback on.");
+            }
+        }
 
         const validMovies = recommendedMovies.filter(Boolean);
         console.log(`[AI] Returning ${validMovies.length} valid movies to UI.`);
         return validMovies;
+
     } catch (e: any) {
         console.error("[AI] PickedForYou Error:", e.message);
         return [];
