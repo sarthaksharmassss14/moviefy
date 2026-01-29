@@ -94,7 +94,6 @@ export const MOVIE_GENRES: Record<number, string> = {
     9648: "Mystery",
     10749: "Romance",
     878: "Science Fiction",
-    10770: "TV Movie",
     53: "Thriller",
     10752: "War",
     37: "Western",
@@ -102,13 +101,16 @@ export const MOVIE_GENRES: Record<number, string> = {
 
 export const MOVIE_LANGUAGES: Record<string, string> = {
     en: "English",
-    hi: "Hindi",
     es: "Spanish",
     fr: "French",
     ja: "Japanese",
     ko: "Korean",
     de: "German",
     it: "Italian",
+    sv: "Swedish",
+    ru: "Russian",
+    fa: "Persian",
+    no: "Norwegian",
 };
 
 export async function fetchFromOMDb(imdbId: string) {

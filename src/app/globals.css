@@ -1057,33 +1057,46 @@ button {
   .meta-info, .genres, .scores-grid, .actions { justify-content: center; }
   .search-container { 
     grid-template-columns: 1fr;
-    margin-top: 130px; /* Increased to clear navbar completely */
+    margin-top: 85px;
     padding: 0 16px;
-    gap: 10px;
+    gap: 16px;
+    display: flex;
+    flex-direction: column;
   }
   .sidebar-filters { 
     position: static;
-    padding: 12px;
-    border-radius: 16px;
-    margin-bottom: 10px;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 0;
+    margin-bottom: 8px;
+    background: transparent;
+    border: none;
+    width: 100%;
+    overflow: hidden;
   }
+  
+  .sidebar-header {
+    display: none !important;
+  }
+
   .filter-group {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
   .filter-group h4 {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     margin-bottom: 8px;
     color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-left: 4px;
   }
   .filter-list {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    padding-bottom: 10px;
-    margin: 0 -4px;
     display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px;
+    margin: 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    mask-image: linear-gradient(to right, black 90%, transparent 100%);
   }
   .filter-list::-webkit-scrollbar {
     display: none;
@@ -1204,6 +1217,13 @@ button {
   padding-bottom: 60px;
 }
 
+@media (max-width: 900px) {
+  .pagination {
+    margin-top: 10px;
+    padding-bottom: 40px;
+  }
+}
+
 .page-actions {
   display: flex;
   align-items: center;
@@ -1242,6 +1262,26 @@ button {
   background: var(--primary-gradient);
   color: white;
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+@media (max-width: 640px) {
+  .page-numbers {
+    max-width: 60vw;
+    overflow-x: auto;
+    padding: 4px;
+    gap: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .page-numbers::-webkit-scrollbar {
+    display: none;
+  }
+  .page-num {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
 }
 
 .page-nav-btn {

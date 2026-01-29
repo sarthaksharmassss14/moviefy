@@ -68,7 +68,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         totalPages = data.total_pages || 1;
     }
 
-    const yearFilters = ["2025", "2024", "2023", "2020s", "2010s", "2000s", "1990s", "1980s", "1970s", "1960s", "1950s", "1940s"];
+    const yearFilters = ["2020s", "2010s", "2000s", "1990s", "1980s", "1970s", "1960s", "1950s", "1940s"];
 
     // Helper for pagination links
     const getPageLink = (p: number) => {
@@ -161,10 +161,19 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
                 <section className="results-section">
                     <h1 className="section-title">{title}</h1>
-                    <div className="movie-grid">
-                        {results.map((movie: any) => (
-                            <MovieCard key={movie.id} movie={movie} />
-                        ))}
+                    <div className="shelf-container">
+                        <div className="movie-grid shelf-grid">
+                            {results.map((movie: any) => (
+                                <MovieCard key={movie.id} movie={movie} />
+                            ))}
+                        </div>
+                        {results.length > 0 && (
+                            <div className="shelf-indicator mobile-only mt-4 mb-1">
+                                <div className="swipe-line">
+                                    <div className="swipe-dot"></div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {results.length === 0 ? (

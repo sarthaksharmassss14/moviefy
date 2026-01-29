@@ -449,9 +449,6 @@ export default function Navbar() {
             align-items: center;
         }
         @media (max-width: 500px) {
-          .logo span {
-            display: none;
-          }
           .search-wrapper {
             margin: 0 8px;
           }
