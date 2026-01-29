@@ -252,16 +252,19 @@ export default function MoodSearch() {
         }
         @media (max-width: 640px) {
           .mood-form {
-            gap: 8px;
+            flex-direction: column;
+            gap: 12px;
           }
           .mood-input {
-            padding: 10px 14px;
-            font-size: 0.9rem;
+            width: 100%;
+            padding: 14px;
+            font-size: 0.95rem;
           }
           .mood-submit {
-            padding: 0 16px;
-            min-width: 90px;
-            font-size: 0.9rem;
+            width: 100%;
+            padding: 14px;
+            min-width: unset;
+            font-size: 1rem;
           }
         }
         .mood-submit:hover:not(:disabled) {

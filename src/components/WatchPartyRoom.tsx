@@ -295,6 +295,18 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     <div ref={chatEndRef} />
                 </div>
 
+                <form className="chat-input-area" onSubmit={handleSendMessage}>
+                    <input
+                        type="text"
+                        placeholder="Say something..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                    />
+                    <button type="submit" disabled={!newMessage.trim()}>
+                        <Send size={18} />
+                    </button>
+                </form>
+
                 <div className="sidebar-footer-actions">
                     <button
                         onClick={handleCopyLink}
@@ -323,18 +335,6 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     cancelLabel="Stay"
                     variant="danger"
                 />
-
-                <form className="chat-input-area" onSubmit={handleSendMessage}>
-                    <input
-                        type="text"
-                        placeholder="Say something..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                    />
-                    <button type="submit" disabled={!newMessage.trim()}>
-                        <Send size={18} />
-                    </button>
-                </form>
             </aside>
 
             <Toast
@@ -416,7 +416,6 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                 .sidebar-footer-actions {
                     padding: 12px 16px;
                     background: rgba(0,0,0,0.4);
-                    border-top: 1px solid rgba(255,255,255,0.05);
                     display: flex;
                     gap: 8px;
                 }

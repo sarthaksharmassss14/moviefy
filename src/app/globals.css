@@ -447,6 +447,15 @@ button {
   margin-bottom: 32px;
 }
 
+@media (max-width: 640px) {
+  .scores-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
 .score-card {
   padding: 12px;
   text-align: center;
