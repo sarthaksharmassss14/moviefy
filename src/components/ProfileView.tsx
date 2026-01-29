@@ -161,10 +161,17 @@ export default function ProfileView({ user, watchlist, reviews, lists = [], libr
                             Continue Watching <span className="count">({library.watching.length})</span>
                         </h2>
                         {library.watching.length > 0 ? (
-                            <div className="movie-grid-compact">
-                                {library.watching.map((movie: any) => (
-                                    <MovieCard key={movie.id} movie={movie} />
-                                ))}
+                            <div className="shelf-container">
+                                <div className="movie-grid shelf-grid">
+                                    {library.watching.map((movie: any) => (
+                                        <MovieCard key={movie.id} movie={movie} />
+                                    ))}
+                                </div>
+                                <div className="shelf-indicator mobile-only mt-4">
+                                    <div className="swipe-line">
+                                        <div className="swipe-dot"></div>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <div className="empty-state">
@@ -180,10 +187,17 @@ export default function ProfileView({ user, watchlist, reviews, lists = [], libr
                             Watch History <span className="count">({library.finished.length})</span>
                         </h2>
                         {library.finished.length > 0 ? (
-                            <div className="movie-grid-compact">
-                                {library.finished.map((movie: any) => (
-                                    <MovieCard key={movie.id} movie={movie} />
-                                ))}
+                            <div className="shelf-container">
+                                <div className="movie-grid shelf-grid">
+                                    {library.finished.map((movie: any) => (
+                                        <MovieCard key={movie.id} movie={movie} />
+                                    ))}
+                                </div>
+                                <div className="shelf-indicator mobile-only mt-4">
+                                    <div className="swipe-line">
+                                        <div className="swipe-dot"></div>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <div className="empty-state">
@@ -203,10 +217,17 @@ export default function ProfileView({ user, watchlist, reviews, lists = [], libr
                             My Watchlist <span className="count">({watchlist.length})</span>
                         </h2>
                         {watchlist.length > 0 ? (
-                            <div className="movie-grid-compact">
-                                {watchlist.map((movie: any) => (
-                                    <MovieCard key={movie.id} movie={movie} />
-                                ))}
+                            <div className="shelf-container">
+                                <div className="movie-grid shelf-grid">
+                                    {watchlist.map((movie: any) => (
+                                        <MovieCard key={movie.id} movie={movie} />
+                                    ))}
+                                </div>
+                                <div className="shelf-indicator mobile-only mt-4">
+                                    <div className="swipe-line">
+                                        <div className="swipe-dot"></div>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <div className="empty-state">
@@ -589,11 +610,6 @@ export default function ProfileView({ user, watchlist, reviews, lists = [], libr
             font-weight: 500;
         }
 
-        .movie-grid-compact {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-        }
 
         /* Reviews */
         .reviews-list {
@@ -677,6 +693,24 @@ export default function ProfileView({ user, watchlist, reviews, lists = [], libr
             color: #d1d1d6;
             font-style: italic;
             line-height: 1.6;
+            max-height: 120px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .review-text::-webkit-scrollbar {
+            width: 4px;
+        }
+        .review-text::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+        }
+        .review-text::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+        .review-text::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
         }
 
         /* Lists */

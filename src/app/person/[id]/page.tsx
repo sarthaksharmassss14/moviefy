@@ -110,10 +110,17 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     <h2 className="text-3xl font-bold mb-8">
                         Filmography <span className="text-zinc-400 text-2xl">(As Actor)</span>
                     </h2>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-8">
-                        {processedActing.map((movie: any) => (
-                            <MovieCard key={movie.id} movie={movie} />
-                        ))}
+                    <div className="shelf-container">
+                        <div className="movie-grid shelf-grid">
+                            {processedActing.map((movie: any) => (
+                                <MovieCard key={movie.id} movie={movie} />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="shelf-indicator mobile-only mt-4">
+                        <div className="swipe-line">
+                            <div className="swipe-dot"></div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -123,10 +130,17 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     <h2 className="text-3xl font-bold mb-8 border-t border-white/5 pt-12">
                         Directed Work <span className="text-zinc-400 text-2xl">(Director)</span>
                     </h2>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-8">
-                        {processedDirected.map((movie: any) => (
-                            <MovieCard key={movie.id} movie={movie} />
-                        ))}
+                    <div className="shelf-container">
+                        <div className="movie-grid shelf-grid">
+                            {processedDirected.map((movie: any) => (
+                                <MovieCard key={movie.id} movie={movie} />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="shelf-indicator mobile-only mt-4">
+                        <div className="swipe-line">
+                            <div className="swipe-dot"></div>
+                        </div>
                     </div>
                 </div>
             )}

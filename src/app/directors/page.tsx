@@ -59,35 +59,42 @@ export default async function DirectorsPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-8">
-                    {directors.map((director) => (
-                        <Link
-                            key={director.id}
-                            href={`/person/${director.id}`}
-                            className="group p-5 rounded-[24px] bg-white/[0.02] border border-white/[0.05] transition-all duration-300 cubic-bezier[0.4, 0, 0.2, 1] hover:bg-white/[0.05] hover:-translate-y-2 hover:border-indigo-500/20 hover:shadow-[0_20_40px_rgba(0,0,0,0.4)]"
-                        >
-                            <div className="flex flex-col items-center text-center gap-4">
-                                <div className="relative w-32 h-32 rounded-full p-1 border-2 border-transparent group-hover:border-indigo-500 transition-all duration-300 overflow-hidden shadow-2xl">
-                                    <div className="w-full h-full rounded-full overflow-hidden relative">
-                                        <Image
-                                            src={director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : "/no-actor.png"}
-                                            alt={director.name}
-                                            fill
-                                            className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
+                <div className="shelf-container">
+                    <div className="movie-grid shelf-grid">
+                        {directors.map((director) => (
+                            <Link
+                                key={director.id}
+                                href={`/person/${director.id}`}
+                                className="group p-5 rounded-[24px] bg-white/[0.02] border border-white/[0.05] transition-all duration-300 cubic-bezier[0.4, 0, 0.2, 1] hover:bg-white/[0.05] hover:-translate-y-2 hover:border-indigo-500/20 hover:shadow-[0_20_40px_rgba(0,0,0,0.4)]"
+                            >
+                                <div className="flex flex-col items-center text-center gap-4">
+                                    <div className="relative w-32 h-32 rounded-full p-1 border-2 border-transparent group-hover:border-indigo-500 transition-all duration-300 overflow-hidden shadow-2xl">
+                                        <div className="w-full h-full rounded-full overflow-hidden relative">
+                                            <Image
+                                                src={director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : "/no-actor.png"}
+                                                alt={director.name}
+                                                fill
+                                                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h3 className="font-bold text-lg text-white group-hover:text-indigo-400 transition-colors duration-300">
+                                            {director.name}
+                                        </h3>
+                                        <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            View Masterpieces
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <h3 className="font-bold text-lg text-white group-hover:text-indigo-400 transition-colors duration-300">
-                                        {director.name}
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        View Masterpieces
-                                    </p>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+                <div className="shelf-indicator mobile-only mt-8">
+                    <div className="swipe-line">
+                        <div className="swipe-dot"></div>
+                    </div>
                 </div>
             </div>
 

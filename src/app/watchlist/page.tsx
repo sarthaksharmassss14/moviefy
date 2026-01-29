@@ -33,16 +33,25 @@ export default async function WatchlistPage() {
                     My <span className="gradient-text">Watchlist</span>
                 </h1>
 
-                <div className="movie-grid">
-                    {filteredMovies.map((movie: any) => (
-                        <MovieCard key={movie.id} movie={movie} />
-                    ))}
-                    {filteredMovies.length === 0 && (
-                        <div className="empty-state glass">
-                            <p>Your watchlist is empty. Start exploring!</p>
-                        </div>
-                    )}
+                <div className="shelf-container">
+                    <div className="movie-grid shelf-grid">
+                        {filteredMovies.map((movie: any) => (
+                            <MovieCard key={movie.id} movie={movie} />
+                        ))}
+                    </div>
                 </div>
+                {filteredMovies.length > 0 && (
+                    <div className="shelf-indicator mobile-only mt-6 mb-12">
+                        <div className="swipe-line">
+                            <div className="swipe-dot"></div>
+                        </div>
+                    </div>
+                )}
+                {filteredMovies.length === 0 && (
+                    <div className="empty-state glass">
+                        <p>Your watchlist is empty. Start exploring!</p>
+                    </div>
+                )}
             </div>
         </main>
     );
