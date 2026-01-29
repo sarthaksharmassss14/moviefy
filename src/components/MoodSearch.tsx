@@ -151,38 +151,46 @@ export default function MoodSearch() {
       {results.length > 0 && !isLoading && (
         <div className="mood-results">
           <h3 className="results-title">AI Picks for your mood:</h3>
-          <motion.div
-            key={JSON.stringify(results.map(r => r.id))} // Dynamic key to force re-animation
-            className="movie-grid"
-            initial="hidden"
-            animate="show"
-            variants={{
-              hidden: { opacity: 0 },
-              show: {
-                opacity: 1,
-                transition: {
-                  staggerChildren: 0.1
-                }
-              }
-            }}
-          >
-            {results.slice(0, 5).map((movie) => (
-              <motion.div
-                key={movie.id}
-                variants={{
-                  hidden: { opacity: 0, y: 30, filter: "blur(5px)" },
-                  show: {
-                    opacity: 1,
-                    y: 0,
-                    filter: "blur(0px)",
-                    transition: { type: "spring", stiffness: 80, damping: 12 }
+          <div className="shelf-container">
+            <motion.div
+              key={JSON.stringify(results.map(r => r.id))}
+              className="movie-grid shelf-grid"
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: { opacity: 0 },
+                show: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1
                   }
-                }}
-              >
-                <MovieCard movie={movie} />
-              </motion.div>
-            ))}
-          </motion.div>
+                }
+              }}
+            >
+              {results.slice(0, 5).map((movie) => (
+                <motion.div
+                  key={movie.id}
+                  className="shelf-item"
+                  variants={{
+                    hidden: { opacity: 0, y: 30, filter: "blur(5px)" },
+                    show: {
+                      opacity: 1,
+                      y: 0,
+                      filter: "blur(0px)",
+                      transition: { type: "spring", stiffness: 80, damping: 12 }
+                    }
+                  }}
+                >
+                  <MovieCard movie={movie} />
+                </motion.div>
+              ))}
+            </motion.div>
+            <div className="shelf-indicator mobile-only mt-6 mb-8">
+              <div className="swipe-line">
+                <div className="swipe-dot"></div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
