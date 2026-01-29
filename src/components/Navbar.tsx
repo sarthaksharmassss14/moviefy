@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { UserButton, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
-import { Search, Film, Heart, List, Home, Loader2, LogOut, SlidersHorizontal } from "lucide-react";
+import { Film, List, LogOut, Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -13,6 +13,7 @@ export default function Navbar() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -58,17 +59,23 @@ export default function Navbar() {
     }
   };
 
+  const navLinks = [
+    { href: "/directors", label: "Directors" },
+  ];
+
   return (
     <nav className="navbar glass">
       <div className="nav-content">
-        <Link
-          href="/"
-          className="logo"
-          onClick={() => console.log("--- AUTH DEBUG ---\nCheck terminal/server logs to see if TMDB_API_KEY is active.")}
-        >
-          <Film className="logo-icon" />
-          <span className="gradient-text">Moviefy</span>
-        </Link>
+        <div className="nav-left">
+          <Link
+            href="/"
+            className="logo"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <Film className="logo-icon" />
+            <span className="gradient-text">Moviefy</span>
+          </Link>
+        </div>
 
         <div className="search-wrapper" ref={searchRef}>
           <form onSubmit={handleSearch} className="search-bar">
@@ -124,16 +131,29 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="nav-links">
-          <Link href="/directors" className="nav-link-directors">
-            Directors
-          </Link>
-          <div className="auth-btn">
+        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="nav-link-item"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {isSignedIn && (
+            <Link
+              href="/profile"
+              className="nav-link-item"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              My Dashboard
+            </Link>
+          )}
+          <div className="auth-section">
             {isSignedIn ? (
-              <div className="user-menu">
-                <Link href="/profile" className="dashboard-link">
-                  My Dashboard
-                </Link>
+              <div className="user-control">
                 <div className="user-btn-wrapper">
                   <UserButton afterSignOutUrl="/" />
                 </div>
@@ -146,11 +166,19 @@ export default function Navbar() {
               </div>
             ) : (
               <SignInButton mode="modal">
-                <button className="login-btn">Sign In</button>
+                <button className="login-btn" onClick={() => setIsMobileMenuOpen(false)}>Sign In</button>
               </SignInButton>
             )}
           </div>
         </div>
+
+        <button
+          className="mobile-toggle"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <div className="close-icon">×</div> : <List />}
+        </button>
       </div>
 
       <style jsx>{`
@@ -291,17 +319,6 @@ export default function Navbar() {
           align-items: center;
           gap: 24px;
         }
-        .nav-link {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: var(--text-secondary);
-          font-weight: 500;
-          transition: color 0.3s ease;
-        }
-        .nav-link:hover {
-          color: white;
-        }
         .login-btn {
           background: var(--primary-gradient);
           color: white;
@@ -330,6 +347,35 @@ export default function Navbar() {
           background: rgba(239, 68, 68, 0.2);
           transform: translateY(-1px);
         }
+        .nav-link-item {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: var(--text-secondary);
+          transition: color 0.2s;
+          white-space: nowrap;
+        }
+        .nav-link-item:hover {
+          color: white;
+        }
+        .mobile-toggle {
+          display: none;
+          color: white;
+          z-index: 2001;
+          font-size: 1.5rem;
+        }
+        .close-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+        .auth-section {
+          display: flex;
+          align-items: center;
+        }
+        .user-control {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
         .spinning {
           animation: spin 1s linear infinite;
         }
@@ -337,44 +383,78 @@ export default function Navbar() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        .nav-link-directors {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            transition: color 0.2s;
-            white-space: nowrap;
-        }
-        .nav-link-directors:hover {
-            color: white;
-        }
+
         @media (max-width: 900px) {
-          .search-wrapper { width: 200px; }
-          .nav-link span { display: none; }
-          .dashboard-link { display: none; }
-          .nav-link-directors { display: none; }
-        }
-        
-        .user-menu {
+          .navbar {
+            margin: 10px;
+            padding: 0 16px;
+          }
+          .search-wrapper { 
+            position: relative;
+            top: 0;
+            flex: 1;
+            margin: 0 12px;
+            width: auto;
+            z-index: 999;
+          }
+          .search-bar {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 12px;
+          }
+          .search-bar input {
+            font-size: 0.85rem;
+          }
+          .mobile-toggle {
+            display: block;
+          }
+          .nav-links {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 250px;
+            height: 100vh;
+            background: rgba(10, 10, 12, 0.98);
+            backdrop-filter: blur(20px);
             display: flex;
-            align-items: center;
-            gap: 20px; /* Explicit gap */
-        }
-        
-        .dashboard-link {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            transition: color 0.2s;
-            white-space: nowrap;
-        }
-        
-        .dashboard-link:hover {
-            color: white;
+            flex-direction: column;
+            padding: 80px 24px;
+            gap: 30px;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 2000;
+            align-items: flex-start;
+          }
+          .nav-links.mobile-active {
+            right: 0;
+          }
+          .auth-section {
+            width: 100%;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          .user-control {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+          }
+          .logout-btn-nav {
+            width: 100%;
+            justify-content: center;
+          }
         }
 
         .user-btn-wrapper {
             display: flex;
             align-items: center;
+        }
+        @media (max-width: 500px) {
+          .logo span {
+            display: none;
+          }
+          .search-wrapper {
+            margin: 0 8px;
+          }
         }
       `}</style>
     </nav>

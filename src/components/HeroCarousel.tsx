@@ -202,7 +202,7 @@ export default function HeroCarousel({ movies }: { movies: any[] }) {
         @media (max-width: 768px) {
           .slide-title { font-size: 2rem; }
           .slide-content { bottom: 20%; left: 20px; right: 20px; max-width: none; }
-          .hero-carousel { height: 65vh; }
+          .hero-carousel { height: 65vh; padding-top: 80px; }
         }
       `}</style>
     </div>

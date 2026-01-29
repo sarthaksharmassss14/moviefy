@@ -194,6 +194,19 @@ export default function MoodSearch() {
           padding: 30px;
           margin-bottom: 30px;
         }
+        @media (max-width: 640px) {
+          .mood-search-box {
+            padding: 20px;
+            margin-bottom: 20px;
+          }
+          .mood-header h2 {
+            font-size: 1.25rem;
+          }
+          .mood-desc {
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+          }
+        }
         .mood-header {
           display: flex;
           align-items: center;
@@ -233,6 +246,23 @@ export default function MoodSearch() {
           font-weight: 600;
           transition: transform 0.2s ease;
           min-width: 120px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        @media (max-width: 640px) {
+          .mood-form {
+            gap: 8px;
+          }
+          .mood-input {
+            padding: 10px 14px;
+            font-size: 0.9rem;
+          }
+          .mood-submit {
+            padding: 0 16px;
+            min-width: 90px;
+            font-size: 0.9rem;
+          }
         }
         .mood-submit:hover:not(:disabled) {
           transform: translateY(-2px);

@@ -2,18 +2,31 @@ import Navbar from "@/components/Navbar";
 import MovieCard from "@/components/MovieCard";
 import { fetchFromTMDB, MOVIE_GENRES, MOVIE_LANGUAGES } from "@/lib/tmdb";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Footer from "@/components/Footer";
+import { auth } from "@clerk/nextjs/server";
+import { getMoodRecommendations } from "@/lib/recommendations";
 
-export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string, genre?: string, year?: string, lang?: string, page?: string }> }) {
-    const { q, genre, year, lang, page: pageParam } = await searchParams;
+export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string, mood?: string, genre?: string, year?: string, lang?: string, page?: string }> }) {
+    const { q, mood, genre, year, lang, page: pageParam } = await searchParams;
     const page = parseInt(pageParam || "1");
+    const { userId } = await auth();
 
     let results = [];
-    let title = "Browse Movies";
+    let title: any = "Browse Movies";
     let totalPages = 1;
 
-    if (q) {
+    if (mood) {
+        const data = await getMoodRecommendations(mood, userId);
+        results = data.results || [];
+        totalPages = 1;
+        title = (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Sparkles className="text-purple-500" size={24} color="#a855f7" />
+                <span>AI Vibe: {mood}</span>
+            </div>
+        );
+    } else if (q) {
         const data = await fetchFromTMDB("/search/movie", { query: q, page: page.toString() });
         results = data.results || [];
         totalPages = data.total_pages || 1;
@@ -61,6 +74,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     const getPageLink = (p: number) => {
         const params = new URLSearchParams({
             ...(q && { q }),
+            ...(mood && { mood }),
             ...(genre && { genre }),
             ...(year && { year }),
             ...(lang && { lang }),
@@ -158,7 +172,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                             <p>No movies found matching these criteria.</p>
                             <Link href="/search" className="action-btn" style={{ marginTop: '20px' }}>Reset All Filters</Link>
                         </div>
-                    ) : (
+                    ) : !mood && (
                         <div className="pagination">
                             <div className="page-actions">
                                 {page > 1 && (

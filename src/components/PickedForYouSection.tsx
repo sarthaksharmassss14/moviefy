@@ -45,16 +45,20 @@ export default function PickedForYouSection({ movies }: { movies: any[] }) {
                     </p>
                 </div>
 
-                <div className="movie-grid" style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                    gap: '24px'
-                }}>
-                    {movies.slice(0, 6).map((movie: any) => (
-                        <div key={movie.id} className="picked-card-wrapper">
-                            <MovieCard movie={movie} />
-                        </div>
-                    ))}
+                <div className="shelf-container">
+                    <div className="movie-grid shelf-grid">
+                        {movies.slice(0, 6).map((movie: any) => (
+                            <div key={movie.id} className="picked-card-wrapper">
+                                <MovieCard movie={movie} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="swipe-footer">
+                    <span className="swipe-text">SWIPE →</span>
+                    <div className="swipe-line">
+                        <div className="swipe-dot"></div>
+                    </div>
                 </div>
             </div>
 
@@ -113,9 +117,72 @@ export default function PickedForYouSection({ movies }: { movies: any[] }) {
                 .picked-card-wrapper:hover {
                    transform: translateY(-8px) scale(1.02);
                 }
+                    .movie-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                        gap: 24px;
+                    }
+                }
                 @media (max-width: 768px) {
-                    .content-wrapper { padding: 0 20px !important; }
-                    .section-title { font-size: 1.5rem !important; }
+                    .content-wrapper { padding: 0 16px !important; }
+                    .section-title { 
+                        font-size: 1.5rem !important;
+                        justify-content: center;
+                    }
+                    .picked-for-you-section p {
+                        margin-left: 0 !important;
+                        text-align: center;
+                        font-size: 0.9rem !important;
+                    }
+                    .shelf-container {
+                        margin: 0 -16px;
+                        padding: 10px 16px;
+                    }
+                    .shelf-grid {
+                        display: flex !important;
+                        padding-bottom: 10px;
+                    }
+                    .swipe-footer {
+                        display: flex !important;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 8px;
+                        margin-top: 10px;
+                        opacity: 0.6;
+                    }
+                    .swipe-text {
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        color: var(--text-secondary);
+                    }
+                    .swipe-line {
+                        width: 40px;
+                        height: 2px;
+                        background: rgba(255, 255, 255, 0.1);
+                        border-radius: 2px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .swipe-dot {
+                        position: absolute;
+                        top: 0;
+                        left: -10px;
+                        width: 15px;
+                        height: 100%;
+                        background: #a855f7;
+                        border-radius: 2px;
+                        animation: swipeHint 2s infinite ease-in-out;
+                    }
+                    @keyframes swipeHint {
+                        0% { left: -100%; }
+                        50% { left: 100%; }
+                        100% { left: 100%; }
+                    }
+                }
+                @media (min-width: 769px) {
+                    .swipe-footer { display: none; }
                 }
             `}</style>
         </section>

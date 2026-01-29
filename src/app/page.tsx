@@ -116,17 +116,19 @@ async function MovieShelf({ title, endpoint, filterIndian = false }: { title: st
   }
 
   return (
-    <section className="movie-section">
+    <section className="movie-section shelf-section">
       <div className="section-header">
         <h2 className="section-title">{title}</h2>
         <Link href="/search" className="section-filter-btn">
           <SlidersHorizontal size={20} />
         </Link>
       </div>
-      <div className="movie-grid">
-        {movies.slice(0, 10).map((movie: any) => (
-          <MovieCard key={movie.id} movie={movie} />
-        ))}
+      <div className="shelf-container">
+        <div className="movie-grid shelf-grid">
+          {movies.slice(0, 10).map((movie: any) => (
+            <MovieCard key={movie.id} movie={movie} />
+          ))}
+        </div>
       </div>
     </section>
   );
