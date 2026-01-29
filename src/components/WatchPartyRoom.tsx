@@ -346,34 +346,34 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
 
             <style jsx>{`
                 .party-layout {
-                    display: grid;
-                    grid-template-columns: 1fr 350px;
                     position: fixed;
-                    top: 70px;
+                    top: 74px;
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    display: flex;
+                    display: grid;
+                    grid-template-columns: 1fr 380px;
                     background: #000;
                     overflow: hidden;
                 }
                 .party-main {
-                    flex: 1;
                     display: flex;
                     flex-direction: column;
                     height: 100%;
                     overflow: hidden;
                     border-right: 1px solid rgba(255,255,255,0.05);
+                    position: relative;
                 }
                 .party-header-bar {
                     flex-shrink: 0;
-                    padding: 16px 24px;
-                    background: rgba(10, 10, 12, 0.8);
+                    padding: 12px 24px;
+                    background: rgba(10, 10, 12, 0.95);
                     backdrop-filter: blur(10px);
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     z-index: 10;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
                 }
                 .movie-mini-info { display: flex; gap: 12px; align-items: center; }
                 .movie-mini-info img { height: 32px; border-radius: 4px; }
@@ -385,76 +385,61 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     background: black; 
                     position: relative; 
                     overflow: hidden;
-                }
-                .party-video-container iframe { width: 100%; height: 100%; border: none; }
-                
-                .party-controls-bar, .participant-info-bar {
-                    flex-shrink: 0;
-                    height: 80px;
-                    background: #0a0a0c;
-                    border-top: 1px solid rgba(255,255,255,0.05);
                     display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 0 24px;
+                    flex-direction: column;
                 }
-                .sync-info-badge.busy {
-                    background: rgba(99, 102, 241, 0.1);
-                    border-color: rgba(99, 102, 241, 0.2);
-                    color: #818cf8;
+                .party-video-container iframe { 
+                    width: 100%; 
+                    height: 100%; 
+                    flex: 1;
+                    border: none; 
                 }
                 
                 .party-sidebar {
-                    width: 380px;
                     display: flex;
                     flex-direction: column;
                     height: 100%;
-                    background: #0f0f12;
+                    background: #0b0b0d;
                     border-left: 1px solid rgba(255,255,255,0.05);
                 }
                 .party-sidebar-header {
                     flex-shrink: 0;
                     padding: 16px;
-                    background: #141418;
+                    background: #101014;
                     border-bottom: 1px solid rgba(255,255,255,0.05);
                 }
                 .sidebar-tabs {
-                    padding: 0; /* Removed padding from here as it's now in header */
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                 }
-                .sidebar-invite-section {
-                    padding: 0 16px 16px;
-                }
                 .sidebar-footer-actions {
                     padding: 12px 16px;
-                    background: rgba(0,0,0,0.2);
+                    background: rgba(0,0,0,0.4);
                     border-top: 1px solid rgba(255,255,255,0.05);
                     display: flex;
                     gap: 8px;
                 }
                 .invite-btn-primary {
                     flex: 2;
-                    padding: 10px;
-                    border-radius: 10px;
-                    background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+                    padding: 12px;
+                    border-radius: 12px;
+                    background: var(--primary-gradient);
                     color: white;
                     border: none;
                     font-weight: 700;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 6px;
+                    gap: 8px;
                     cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
+                    transition: all 0.2s;
                     font-size: 0.85rem;
                 }
                 .exit-btn-secondary {
                     flex: 1;
-                    padding: 10px;
-                    border-radius: 10px;
+                    padding: 12px;
+                    border-radius: 12px;
                     background: rgba(239, 68, 68, 0.1);
                     color: #ef4444;
                     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -462,171 +447,67 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 6px;
+                    gap: 8px;
                     cursor: pointer;
                     transition: all 0.2s;
                     font-size: 0.85rem;
                 }
-                .exit-btn-secondary:hover {
-                    background: #ef4444;
-                    color: white;
-                }
-                .invite-btn-primary:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
-                }
-                .invite-btn-primary:active {
-                    transform: translateY(0);
-                }
-                .sidebar-tab { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #818cf8; }
-                .sidebar-participants-count { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #a1a1aa; }
+                .exit-btn-secondary:hover { background: #ef4444; color: white; }
                 
-                .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+                .sidebar-tab { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a855f7; }
+                .sidebar-participants-count { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #a1a1aa; font-weight: 600; }
+                
+                .chat-messages { 
+                    flex: 1; 
+                    overflow-y: auto; 
+                    padding: 20px 16px; 
+                    display: flex; 
+                    flex-direction: column; 
+                    gap: 16px; 
+                    background: #09090b;
+                }
                 .chat-msg { max-width: 85%; display: flex; flex-direction: column; }
                 .chat-msg.sent { align-self: flex-end; }
                 .chat-msg.received { align-self: flex-start; }
-                .chat-user-name { font-size: 0.7rem; color: #a1a1aa; margin-bottom: 4px; margin-left: 10px; }
-                .chat-bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; color: white; line-height: 1.4; }
+                .chat-user-name { font-size: 0.75rem; color: #a1a1aa; margin-bottom: 4px; margin-left: 8px; }
+                .chat-bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; color: white; line-height: 1.5; }
                 .sent .chat-bubble { background: #6366f1; border-bottom-right-radius: 4px; }
                 .received .chat-bubble { background: rgba(255,255,255,0.08); border-bottom-left-radius: 4px; }
                 
                 .chat-system-msg {
                     align-self: center;
-                    font-size: 0.75rem;
-                    color: #a1a1aa;
-                    background: rgba(255,255,255,0.05);
+                    font-size: 0.7rem;
+                    color: rgba(255, 255, 255, 0.4);
+                    background: rgba(255,255,255,0.03);
                     padding: 4px 12px;
                     border-radius: 20px;
                     margin: 8px 0;
-                    border: 1px solid rgba(255,255,255,0.05);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
 
                 .chat-input-area {
                     padding: 16px;
                     display: flex;
                     gap: 10px;
-                    background: rgba(0,0,0,0.2);
+                    background: #101014;
                     border-top: 1px solid rgba(255,255,255,0.05);
                 }
                 .chat-input-area input {
                     flex: 1;
                     background: rgba(255,255,255,0.05);
                     border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 20px;
-                    padding: 8px 16px;
+                    border-radius: 24px;
+                    padding: 10px 18px;
                     color: white;
                     outline: none;
+                    font-size: 0.95rem;
                 }
                 .chat-input-area button {
-                    width: 36px; height: 36px; border-radius: 50%; background: #6366f1; color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;
+                    width: 42px; height: 42px; border-radius: 50%; background: var(--primary-gradient); color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;
                 }
-                .chat-input-area button:disabled { background: #3f3f46; cursor: not-allowed; }
+                .chat-input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-                .host-sync-controls {
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                }
-                .sync-info-badge {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 4px 10px;
-                    background: rgba(234, 179, 8, 0.1);
-                    border: 1px solid rgba(234, 179, 8, 0.2);
-                    border-radius: 20px;
-                    font-size: 0.7rem;
-                    color: #eab308;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .sync-btn-group {
-                    display: flex;
-                    align-items: center;
-                    background: rgba(255,255,255,0.05);
-                    padding: 4px;
-                    border-radius: 12px;
-                    border: 1px solid rgba(255,255,255,0.1);
-                }
-                .sync-tool-btn {
-                    background: transparent;
-                    color: #a1a1aa;
-                    border: none;
-                    width: 32px;
-                    height: 32px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    border-radius: 8px;
-                    transition: all 0.2s;
-                }
-                .sync-tool-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-                .sync-main-btn {
-                    background: #6366f1;
-                    color: white;
-                    border: none;
-                    width: 38px;
-                    height: 38px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    border-radius: 10px;
-                    margin: 0 4px;
-                    transition: all 0.2s;
-                }
-                .sync-main-btn:hover { transform: scale(1.05); background: #4f46e5; }
-                .sync-now-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 8px 16px;
-                    background: rgba(255,255,255,0.05);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 10px;
-                    color: white;
-                    font-size: 0.8rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .sync-now-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
-                .sync-now-btn.primary {
-                    background: #6366f1;
-                    border: none;
-                }
-                .sync-now-btn.primary:hover {
-                    background: #4f46e5;
-                }
-
-                .sync-manual-input {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    background: rgba(255,255,255,0.05);
-                    padding: 4px 4px 4px 12px;
-                    border-radius: 12px;
-                    border: 1px solid rgba(255,255,255,0.1);
-                    font-size: 0.85rem;
-                    color: #a1a1aa;
-                }
-                .sync-time-field {
-                    width: 60px;
-                    background: rgba(0,0,0,0.3);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 6px;
-                    padding: 4px 8px;
-                    color: white;
-                    outline: none;
-                    font-weight: 600;
-                    text-align: center;
-                }
-                .sync-time-field:focus {
-                    border-color: #6366f1;
-                }
-                
                 .sync-overlay {
                     position: absolute;
                     inset: 0;
@@ -645,6 +526,36 @@ export default function WatchPartyRoom({ party, movie, user }: any) {
                     gap: 16px;
                 }
                 .sync-loader p { color: white; font-weight: 600; font-size: 1.1rem; }
+
+                @media (max-width: 900px) {
+                    .party-layout {
+                        display: flex;
+                        flex-direction: column;
+                        top: 70px;
+                    }
+                    .party-main {
+                        flex: none;
+                        width: 100%;
+                        height: 32vh;
+                        border-right: none;
+                        border-bottom: 2px solid rgba(168, 85, 247, 0.4);
+                        background: #000;
+                    }
+                    .party-sidebar {
+                        width: 100%;
+                        flex: 1;
+                        border-left: none;
+                        overflow: hidden;
+                        background: #050505;
+                    }
+                    .party-header-bar {
+                        display: none;
+                    }
+                    .chat-messages {
+                        padding: 12px;
+                    }
+                }
+                
                 .animate-spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             `}</style>
