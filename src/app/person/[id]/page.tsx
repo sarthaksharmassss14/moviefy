@@ -68,7 +68,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     <div className="flex gap-10 items-start max-md:flex-col max-md:items-center">
                         <div className="shrink-0 overflow-hidden rounded-[20px] shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
                             <Image
-                                src={person.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : "/no-actor.png"}
+                                src={person.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : "/no-actor.svg"}
                                 alt={person.name}
                                 width={300}
                                 height={450}

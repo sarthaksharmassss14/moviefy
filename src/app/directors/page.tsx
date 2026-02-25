@@ -70,7 +70,7 @@ export default async function DirectorsPage() {
                                 <div className="relative w-32 h-32 rounded-full p-1 border-2 border-transparent group-hover:border-indigo-500 transition-all duration-300 overflow-hidden shadow-2xl">
                                     <div className="w-full h-full rounded-full overflow-hidden relative">
                                         <Image
-                                            src={director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : "/no-actor.png"}
+                                            src={director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : "/no-actor.svg"}
                                             alt={director.name}
                                             fill
                                             className="object-cover transition-transform duration-500 group-hover:scale-110"

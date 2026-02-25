@@ -18,7 +18,7 @@ interface MovieCardProps {
 export default function MovieCard({ movie }: MovieCardProps) {
   const imageUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
-    : "/no-poster.png";
+    : "/no-poster.svg";
 
   return (
     <motion.div
